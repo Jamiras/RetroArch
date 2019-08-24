@@ -581,6 +581,9 @@ end:
 #ifdef HAVE_CDROM
    if (stream->cdrom.cue_buf)
       free(stream->cdrom.cue_buf);
+
+   if (stream->cdrom.xfer_buf)
+      memalign_free(stream->cdrom.xfer_buf);
 #endif
    if (stream->buf)
       free(stream->buf);

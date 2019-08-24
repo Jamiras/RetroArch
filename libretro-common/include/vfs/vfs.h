@@ -44,6 +44,10 @@ typedef struct
    size_t cue_len;
    size_t cue_pos;
    char drive;
+   unsigned char* xfer_buf;
+   unsigned xfer_buf_size;
+   unsigned xfer_buf_start_lba;
+   unsigned xfer_buf_num_lbas;
 } vfs_cdrom_t;
 
 typedef struct
