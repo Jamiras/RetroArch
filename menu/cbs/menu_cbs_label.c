@@ -19,6 +19,7 @@
 
 #include "../menu_driver.h"
 #include "../menu_cbs.h"
+#include "../menu_items.h"
 #include "../../file_path_special.h"
 #ifdef HAVE_CHEATS
 #include "../../managers/cheat_manager.h"
@@ -41,6 +42,18 @@ static int action_bind_label_generic(
       const char *label, const char *path,
       char *s, size_t len)
 {
+   return 0;
+}
+
+static int action_bind_label_menu_item(
+      file_list_t *list,
+      unsigned type, unsigned i,
+      const char *label, const char *path,
+      char *s, size_t len)
+{
+   menu_list_t* menu_list = (menu_list_t*)file_list_get_userdata_at_offset(list, i);
+   const menu_item_t* menu_item = menu_list_get(menu_list, i);
+   strlcpy(s, menu_item->label, len);
    return 0;
 }
 
@@ -145,6 +158,9 @@ int menu_cbs_init_bind_label(menu_file_list_cbs_t *cbs,
             break;
          case MENU_ENUM_LABEL_RDB_ENTRY_DETAIL:
             BIND_ACTION_LABEL(cbs, action_bind_label_rdb_entry_detail);
+            break;
+         case MSG_MENU_ITEM:
+            BIND_ACTION_LABEL(cbs, action_bind_label_menu_item);
             break;
          default:
             break;

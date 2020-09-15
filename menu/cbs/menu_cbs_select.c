@@ -23,6 +23,7 @@
 #include "../menu_cbs.h"
 #include "../menu_entries.h"
 #include "../menu_setting.h"
+#include "../menu_items.h"
 #include "../../tasks/tasks_internal.h"
 
 #ifdef HAVE_NETWORKING
@@ -112,6 +113,13 @@ static int action_select_default(
    return ret;
 }
 
+static int action_select_menu_item(
+      const char *path, const char *label, unsigned type,
+      size_t idx, size_t entry_idx)
+{
+   return -1;
+}
+
 static int action_select_path_use_directory(const char *path,
       const char *label, unsigned type, size_t idx, size_t entry_idx)
 {
@@ -131,6 +139,9 @@ static int menu_cbs_init_bind_select_compare_type(
    {
       case FILE_TYPE_USE_DIRECTORY:
          BIND_ACTION_SELECT(cbs, action_select_path_use_directory);
+         break;
+      case MSG_MENU_ITEM:
+         BIND_ACTION_SELECT(cbs, action_select_menu_item);
          break;
       default:
          return -1;

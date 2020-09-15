@@ -757,7 +757,7 @@ static int action_get_title_group_settings(const char *path, const char *label,
       unsigned menu_type, char *s, size_t len)
 {
    unsigned i;
-   typedef struct title_info_list 
+   typedef struct title_info_list
    {
       enum msg_hash_enums type;
       enum msg_hash_enums val;
@@ -799,7 +799,7 @@ static int action_get_title_group_settings(const char *path, const char *label,
       char elem0[255];
       char elem1[255];
       struct string_list list_label = {0};
-      
+
       elem0[0] = elem1[0] = '\0';
 
       string_list_initialize(&list_label);
@@ -838,7 +838,7 @@ static int menu_cbs_init_bind_title_compare_label(menu_file_list_cbs_t *cbs,
       const char *label)
 {
    unsigned i;
-   typedef struct title_info_list 
+   typedef struct title_info_list
    {
       enum msg_hash_enums type;
       int (*cb)(const char *path, const char *label,
@@ -930,7 +930,7 @@ static int menu_cbs_init_bind_title_compare_label(menu_file_list_cbs_t *cbs,
       {MENU_ENUM_LABEL_DEFERRED_CURSOR_MANAGER_LIST, action_get_title_deferred_cursor_manager_list},
       {MENU_ENUM_LABEL_DEFERRED_CURSOR_MANAGER_LIST_RDB_ENTRY_DEVELOPER, action_get_title_list_rdb_entry_developer},
       {MENU_ENUM_LABEL_DEFERRED_CURSOR_MANAGER_LIST_RDB_ENTRY_PUBLISHER, action_get_title_list_rdb_entry_publisher},
-      {MENU_ENUM_LABEL_DEFERRED_CURSOR_MANAGER_LIST_RDB_ENTRY_ORIGIN, 
+      {MENU_ENUM_LABEL_DEFERRED_CURSOR_MANAGER_LIST_RDB_ENTRY_ORIGIN,
          action_get_title_list_rdb_entry_origin},
       {MENU_ENUM_LABEL_DEFERRED_CURSOR_MANAGER_LIST_RDB_ENTRY_FRANCHISE,
             action_get_title_list_rdb_entry_franchise},
@@ -1551,7 +1551,7 @@ int menu_cbs_init_bind_title(menu_file_list_cbs_t *cbs,
       const char *path, const char *label, unsigned type, size_t idx)
 {
    unsigned i;
-   typedef struct title_info_list 
+   typedef struct title_info_list
    {
       enum msg_hash_enums type;
       int (*cb)(const char *path, const char *label,

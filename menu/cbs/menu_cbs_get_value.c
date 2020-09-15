@@ -25,6 +25,7 @@
 #include "../menu_driver.h"
 #include "../../gfx/gfx_animation.h"
 #include "../menu_cbs.h"
+#include "../menu_items.h"
 #if defined(HAVE_CG) || defined(HAVE_GLSL) || defined(HAVE_SLANG) || defined(HAVE_HLSL)
 #include "../menu_shader.h"
 #endif
@@ -568,7 +569,7 @@ static void menu_action_setting_disp_set_label_input_desc(
       settings->uints.input_remap_ids[user_idx][btn_idx];
 
    if (remap_idx != RARCH_UNMAPPED)
-      descriptor = 
+      descriptor =
          runloop_get_system_info()->input_desc_btn[user_idx][remap_idx];
 
    strlcpy(s, "---", len);
@@ -969,6 +970,25 @@ static void menu_action_setting_disp_set_label_generic(
       char *s2, size_t len2)
 {
    *s = '\0';
+   *w = (unsigned)strlen(s);
+   strlcpy(s2, path, len2);
+}
+
+static void menu_action_setting_disp_set_label_menu_item(
+      file_list_t* list,
+      unsigned *w, unsigned type, unsigned i,
+      const char *label,
+      char *s, size_t len,
+      const char *path,
+      char *s2, size_t len2)
+{
+   menu_list_t* menu_list = (menu_list_t*)file_list_get_userdata_at_offset(list, i);
+   menu_item_t* menu_item = menu_list_get(menu_list, i);
+
+   if (!menu_item->value && menu_item->convert_value)
+      menu_item->convert_value(menu_item);
+
+   strlcpy(s, menu_item->value, len);
    *w = (unsigned)strlen(s);
    strlcpy(s2, path, len2);
 }
@@ -1706,7 +1726,7 @@ static int menu_cbs_init_bind_get_string_representation_compare_type(
    info_range_list_t info_list[] = {
 #ifdef HAVE_AUDIOMIXER
       {
-         MENU_SETTINGS_AUDIO_MIXER_STREAM_BEGIN, 
+         MENU_SETTINGS_AUDIO_MIXER_STREAM_BEGIN,
          MENU_SETTINGS_AUDIO_MIXER_STREAM_END,
          menu_action_setting_audio_mixer_stream_name
       },
@@ -1917,6 +1937,9 @@ int menu_cbs_init_bind_get_string_representation(menu_file_list_cbs_t *cbs,
    {
       switch (cbs->enum_idx)
       {
+         case MSG_MENU_ITEM:
+            BIND_ACTION_GET_VALUE(cbs, menu_action_setting_disp_set_label_menu_item);
+            return 0;
          case MENU_ENUM_LABEL_CHEEVOS_LOCKED_ENTRY:
 #ifdef HAVE_CHEEVOS
             BIND_ACTION_GET_VALUE(cbs,

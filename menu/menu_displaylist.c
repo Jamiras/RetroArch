@@ -80,6 +80,9 @@
 #include "menu_networking.h"
 #include "menu_dialog.h"
 
+#include "menu_items.h"
+extern void menu_init_settings_achievements(menu_list_t* list);
+
 #include "../configuration.h"
 #include "../file_path_special.h"
 #include "../defaults.h"
@@ -948,8 +951,8 @@ static unsigned menu_displaylist_parse_system_info(file_list_t *list)
 
    snprintf(tmp, sizeof(tmp), "%s: %s",
          msg_hash_to_str(MENU_ENUM_LABEL_VALUE_INTERNAL_STORAGE_STATUS),
-         perms 
-         ? msg_hash_to_str(MSG_READ_WRITE) 
+         perms
+         ? msg_hash_to_str(MSG_READ_WRITE)
          : msg_hash_to_str(MSG_READ_ONLY));
    if (menu_entries_append_enum(list, tmp, "",
          MENU_ENUM_LABEL_SYSTEM_INFO_ENTRY, MENU_SETTINGS_CORE_INFO_NONE, 0, 0))
@@ -1050,7 +1053,7 @@ static unsigned menu_displaylist_parse_system_info(file_list_t *list)
          {
             snprintf(tmp, sizeof(tmp), " Device display name: %s",
                input_config_get_device_display_name(controller) ?
-               input_config_get_device_display_name(controller) : 
+               input_config_get_device_display_name(controller) :
                msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE));
             if (menu_entries_append_enum(list, tmp, "",
                MENU_ENUM_LABEL_SYSTEM_INFO_CONTROLLER_ENTRY,
@@ -1058,7 +1061,7 @@ static unsigned menu_displaylist_parse_system_info(file_list_t *list)
                count++;
             snprintf(tmp, sizeof(tmp), " Device config name: %s",
                input_config_get_device_display_name(controller) ?
-               input_config_get_device_config_name(controller)  : 
+               input_config_get_device_config_name(controller)  :
                msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE));
             if (menu_entries_append_enum(list, tmp, "",
                MENU_ENUM_LABEL_SYSTEM_INFO_CONTROLLER_ENTRY,
@@ -2334,6 +2337,28 @@ end:
    return 0;
 }
 
+static int menu_displaylist_build(file_list_t *list, menu_list_t* menu_list)
+{
+   menu_list_t* iter = menu_list;
+   int count = 0;
+   int i;
+
+   while (iter)
+   {
+      for (i = 0; i < iter->count; ++i)
+      {
+         menu_entries_append_enum(list, iter->items[i].label, iter->items[i].sublabel,
+               MSG_MENU_ITEM, 0, 0, count);
+         file_list_set_userdata(list, count, menu_list);
+         ++count;
+      }
+
+      iter = iter->next;
+   }
+
+   return count;
+}
+
 static void menu_displaylist_set_new_playlist(
       menu_handle_t *menu, const char *path, bool sort_enabled)
 {
@@ -2837,7 +2862,7 @@ static int menu_displaylist_parse_horizontal_content_actions(
                   menu_driver_get_thumbnail_system(system, sizeof(system));
 
                   if (!string_is_empty(system))
-                     remove_entry_enabled = 
+                     remove_entry_enabled =
                         string_is_equal(system,  "history")   ||
                         string_is_equal(system,  "favorites") ||
                         string_ends_with_size(system, "_history",
@@ -7047,6 +7072,10 @@ unsigned menu_displaylist_build_list(
          break;
       case DISPLAYLIST_RETRO_ACHIEVEMENTS_SETTINGS_LIST:
          {
+            menu_list_t* menu_list = calloc(1, sizeof(menu_list_t));
+            menu_init_settings_achievements(menu_list);
+            count = menu_displaylist_build(list, menu_list);
+/*
             settings_t *settings      = config_get_ptr();
             bool cheevos_enable       = settings->bools.cheevos_enable;
             menu_displaylist_build_info_selective_t build_list[] = {
@@ -7082,6 +7111,7 @@ unsigned menu_displaylist_build_list(
                         false) == 0)
                   count++;
             }
+            */
          }
          break;
       case DISPLAYLIST_ACCOUNTS_TWITCH_LIST:
@@ -8885,10 +8915,10 @@ unsigned menu_displaylist_netplay_refresh_rooms(file_list_t *list)
 #endif
 
          snprintf(s, sizeof(s), "%s: %s%s",
-            netplay_room_list[i].lan 
-            ? msg_hash_to_str(MSG_LOCAL) 
-            : (netplay_room_list[i].host_method == NETPLAY_HOST_METHOD_MITM 
-               ? msg_hash_to_str(MSG_INTERNET_RELAY) 
+            netplay_room_list[i].lan
+            ? msg_hash_to_str(MSG_LOCAL)
+            : (netplay_room_list[i].host_method == NETPLAY_HOST_METHOD_MITM
+               ? msg_hash_to_str(MSG_INTERNET_RELAY)
                : msg_hash_to_str(MSG_INTERNET)),
             netplay_room_list[i].nickname, country);
 
@@ -9940,7 +9970,7 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type,
 #ifdef HAVE_NETWORKING
             char new_label[PATH_MAX_LENGTH];
             struct string_list str_list = {0};
-            
+
             new_label[0] = '\0';
 
             string_list_initialize(&str_list);
@@ -10438,7 +10468,7 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type,
             if (cores_names_size != 0)
             {
                unsigned                      j = 0;
-               struct menu_displaylist_state 
+               struct menu_displaylist_state
                   *p_displist                  = &menu_displist_st;
                struct string_list *cores_paths =
                   string_list_new_special(STRING_LIST_SUPPORTED_CORES_PATHS,
@@ -10461,7 +10491,7 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type,
                            core_name);
                      strlcpy(p_displist->new_lbl_entry,
                            core_path, sizeof(p_displist->new_lbl_entry));
-                     p_displist->new_type = 
+                     p_displist->new_type =
                         MENU_ENUM_LABEL_DETECT_CORE_LIST_OK_CURRENT_CORE;
                   }
                   else if (core_path)
@@ -10538,7 +10568,7 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type,
             if (cores_names_size != 0)
             {
                unsigned j = 0;
-               struct menu_displaylist_state 
+               struct menu_displaylist_state
                   *p_displist                  = &menu_displist_st;
                struct string_list *cores_paths =
                   string_list_new_special(STRING_LIST_SUPPORTED_CORES_PATHS,
@@ -10560,7 +10590,7 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type,
                            msg_hash_to_str(MENU_ENUM_LABEL_VALUE_DETECT_CORE_LIST_OK_CURRENT_CORE),
                            core_name);
                      p_displist->new_lbl_entry[0] = '\0';
-                     p_displist->new_type         = 
+                     p_displist->new_type         =
                         MENU_ENUM_LABEL_FILE_BROWSER_CORE_SELECT_FROM_COLLECTION_CURRENT_CORE;
                   }
                   else if (core_path)
@@ -12462,7 +12492,7 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type,
                   case ST_STRING_OPTIONS:
                      {
                         struct string_list tmp_str_list = {0};
-                        
+
                         string_list_initialize(&tmp_str_list);
                         string_split_noalloc(&tmp_str_list,
                               setting->values, "|");
@@ -12485,7 +12515,7 @@ bool menu_displaylist_ctl(enum menu_displaylist_ctl_state type,
                                     MENU_SETTING_DROPDOWN_SETTING_STRING_OPTIONS_ITEM_SPECIAL, i, 0))
                                  count++;
 
-                              if (!checked_found && 
+                              if (!checked_found &&
                                     string_is_equal(tmp_str_list.elems[i].data,
                                        setting->value.target.string))
                               {
