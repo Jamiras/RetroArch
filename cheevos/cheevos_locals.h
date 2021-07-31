@@ -61,7 +61,8 @@ enum
 {
    RCHEEVOS_ACTIVE_SOFTCORE = 1 << 0,
    RCHEEVOS_ACTIVE_HARDCORE = 1 << 1,
-   RCHEEVOS_ACTIVE_UNOFFICIAL = 1 << 2
+   RCHEEVOS_ACTIVE_UNOFFICIAL = 1 << 2,
+   RCHEEVOS_ACTIVE_UNSUPPORTED = 1 << 3
 };
 
 typedef struct rcheevos_racheevo_t
@@ -109,6 +110,24 @@ typedef struct rcheevos_rapatchdata_t
    unsigned lboard_count;
 } rcheevos_rapatchdata_t;
 
+typedef struct rcheevos_load_info_t
+{
+   bool game_identified;
+   bool user_logged_in;
+} rcheevos_load_info_t;
+
+typedef struct rcheevos_game_info_t
+{
+   int id;
+
+   rcheevos_racheevo_t* achievements;
+   rcheevos_ralboard_t* leaderboards;
+
+   unsigned achievement_count;
+   unsigned leaderboard_count;
+
+} rcheevos_game_info_t;
+
 #ifdef HAVE_MENU
 
 typedef struct rcheevos_menuitem_t
@@ -121,10 +140,19 @@ void rcheevos_menu_reset_badges(void);
 
 #endif
 
+enum rcheevos_load_state
+{
+   RCHEEVOS_LOAD_STATE_IDENTIFYING_GAME,
+   RCHEEVOS_LOAD_STATE_FETCHING_GAME_DATA,
+   RCHEEVOS_LOAD_STATE_UNKNOWN_GAME,
+   RCHEEVOS_LOAD_STATE_LOGIN_FAILED
+};
+
 typedef struct rcheevos_locals_t
 {
    rc_runtime_t runtime;              /* rcheevos runtime state */
    rcheevos_rapatchdata_t patchdata;  /* achievement/leaderboard data from the server */
+   rcheevos_game_info_t game;         /* information about the current game */
    rc_libretro_memory_regions_t memory;/* achievement addresses to core memory mappings */
 
    retro_task_t* task;                /* load task */
@@ -144,6 +172,9 @@ typedef struct rcheevos_locals_t
    unsigned menuitem_capacity;        /* maximum number of items in the menuitems array */
    unsigned menuitem_count;           /* current number of items in the menuitems array */
 #endif
+
+   int  load_state;                   /* current state of the load process */
+   rcheevos_load_info_t load_info;    /* load info */
 
    bool hardcore_active;              /* hardcore functionality is active */
    bool loaded;                       /* load task has completed */
