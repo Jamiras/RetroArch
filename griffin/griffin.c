@@ -193,7 +193,6 @@ ACHIEVEMENTS
 #include "../cheevos/cheevos.c"
 #include "../cheevos/cheevos_client.c"
 #include "../cheevos/cheevos_menu.c"
-#include "../cheevos/cheevos_parser.c"
 
 #include "../deps/rcheevos/src/rapi/rc_api_common.c"
 #include "../deps/rcheevos/src/rapi/rc_api_runtime.c"
