@@ -622,7 +622,7 @@ void rcheevos_menu_populate(void* data)
             MENU_ENUM_LABEL_CANNOT_ACTIVATE_ACHIEVEMENTS_WITH_THIS_CORE,
             FILE_TYPE_NONE, 0, 0);
       }
-      else if (rcheevos_locals->network_error)
+      else if (rcheevos_locals->load_info.state == RCHEEVOS_LOAD_STATE_NETWORK_ERROR)
       {
          menu_entries_append_enum(info->list,
             msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NETWORK_ERROR),

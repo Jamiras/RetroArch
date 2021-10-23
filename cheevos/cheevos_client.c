@@ -333,9 +333,9 @@ static void rcheevos_async_retry_request_after_delay(rcheevos_async_io_request* 
    task_queue_push(task);
 }
 
-static void rcheevos_async_request_failed(rcheevos_async_io_request* request, const char* error)
+static bool rcheevos_async_request_failed(rcheevos_async_io_request* request, const char* error)
 {
-   /* always retry any request once in case of network hiccup */
+   /* always retry any request once (attempt_count==0) in case of network hiccup */
    if (request->attempt_count > 0)
    {
       /* retry failed, don't retry these requests */
@@ -343,9 +343,14 @@ static void rcheevos_async_request_failed(rcheevos_async_io_request* request, co
       {
          case CHEEVOS_ASYNC_RICHPRESENCE: /* timer will ping again */
          case CHEEVOS_ASYNC_FETCH_BADGE: /* fallback to the placeholder image */
-            CHEEVOS_ERR(RCHEEVOS_TAG "%s %u: %s\n", request->failure_message,
-               request->id, error);
-            return;
+            return false;
+
+         case CHEEVOS_ASYNC_RESOLVE_HASH:
+         case CHEEVOS_ASYNC_LOGIN:
+            /* make a maximum of four attempts (0ms -> 250ms -> 500ms -> 1s) */
+            if (request->attempt_count == 3)
+               return false;
+            break;
 
          default:
             break;
@@ -354,6 +359,7 @@ static void rcheevos_async_request_failed(rcheevos_async_io_request* request, co
 
    /* automatically retry the request */
    rcheevos_async_retry_request_after_delay(request, error);
+   return true;
 }
 
 static void rcheevos_async_http_task_callback(
@@ -372,17 +378,14 @@ static void rcheevos_async_http_task_callback(
 
    if (error)
    {
-      if (request->callback && request->attempt_count > 3)
+      /* there was a communication error */
+      if (rcheevos_async_request_failed(request, error))
       {
-         /* if there's a callback, make a maximum of four attempts (0ms -> 250ms -> 500ms -> 1s) */
-         strlcpy(buffer, "Could not connect to server after 4 tries", sizeof(buffer));
+         /* automatically requeued, don't process any further */
+         return;
       }
-      else
-      {
-         /* there was a communication error */
-         rcheevos_async_request_failed(request, error);
-      }
-      return;
+
+      strlcpy(buffer, error, sizeof(buffer));
    }
    else if (!data)
    {
@@ -447,8 +450,6 @@ static void rcheevos_async_http_task_callback(
          snprintf(errbuf, sizeof(errbuf), "%s: %s",
                request->failure_message, buffer);
 
-      CHEEVOS_LOG(RCHEEVOS_TAG "%s\n", errbuf);
-
       switch (request->type)
       {
          case CHEEVOS_ASYNC_RICHPRESENCE:
@@ -456,11 +457,38 @@ static void rcheevos_async_http_task_callback(
             /* Don't bother informing user when these fail */
             break;
 
+         case CHEEVOS_ASYNC_LOGIN:
+         case CHEEVOS_ASYNC_RESOLVE_HASH:
+            if (error)
+            {
+               size_t len = 0;
+               char* ptr;
+
+               if (rcheevos_locals.load_info.state == RCHEEVOS_LOAD_STATE_NETWORK_ERROR)
+                  break;
+
+               rcheevos_locals.load_info.state = RCHEEVOS_LOAD_STATE_NETWORK_ERROR;
+
+               while (request->request.url[len] != '/' || /* find the first single slash */
+                  request->request.url[len + 1] == '/' ||
+                  request->request.url[len - 1] == '/')
+               {
+                  ++len;
+               }
+
+               ptr = errbuf + snprintf(errbuf, sizeof(errbuf), "Could not communicate with ");
+               memcpy(ptr, request->request.url, len);
+               ptr[len] = '\0';
+            }
+            /* fallthrough to default */
+
          default:
             runloop_msg_queue_push(errbuf, 0, 5 * 60, false, NULL,
                MESSAGE_QUEUE_ICON_DEFAULT, MESSAGE_QUEUE_CATEGORY_ERROR);
             break;
       }
+
+      CHEEVOS_LOG(RCHEEVOS_TAG "%s\n", errbuf);
    }
 
    rc_api_destroy_request(&request->request);

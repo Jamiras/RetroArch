@@ -105,6 +105,7 @@ enum rcheevos_load_state
    RCHEEVOS_LOAD_STATE_FETCHING_BADGES,
    RCHEEVOS_LOAD_STATE_DONE,
    RCHEEVOS_LOAD_STATE_UNKNOWN_GAME,
+   RCHEEVOS_LOAD_STATE_NETWORK_ERROR,
    RCHEEVOS_LOAD_STATE_LOGIN_FAILED,
    RCHEEVOS_LOAD_STATE_ABORTED
 };
@@ -170,7 +171,6 @@ typedef struct rcheevos_locals_t
    bool hardcore_active;              /* hardcore functionality is active */
    bool loaded;                       /* load task has completed */
    bool core_supports;                /* false if core explicitly disables achievements */
-   bool network_error;                /* hash lookup or login failed with network error */
    bool leaderboards_enabled;         /* leaderboards are enabled */
    bool leaderboard_notifications;    /* leaderboard notifications are enabled */
    bool leaderboard_trackers;         /* leaderboard trackers are enabled */

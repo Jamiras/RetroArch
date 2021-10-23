@@ -97,7 +97,6 @@ static rcheevos_locals_t rcheevos_locals =
    false,/* hardcore_active */
    false,/* loaded */
    true, /* core_supports */
-   false,/* network_error */
    false,/* leaderboards_enabled */
    false,/* leaderboard_notifications */
    false /* leaderboard_trackers */
@@ -552,9 +551,16 @@ void rcheevos_pause_hardcore(void)
 
 bool rcheevos_load_aborted(void)
 {
-   /* ABORTED indicates that unload has been called, NONE indicates unload quit waiting and ran to completion */
-   return (rcheevos_locals.load_info.state == RCHEEVOS_LOAD_STATE_ABORTED ||
-      rcheevos_locals.load_info.state == RCHEEVOS_LOAD_STATE_NONE);
+   switch (rcheevos_locals.load_info.state)
+   {
+      case RCHEEVOS_LOAD_STATE_ABORTED:       /* unload has been called */
+      case RCHEEVOS_LOAD_STATE_NONE:          /* unload quit waiting and ran to completion */
+      case RCHEEVOS_LOAD_STATE_NETWORK_ERROR: /* login/resolve hash failed after several attempts */
+         return true;
+
+      default:
+         return false;
+   }
 }
 
 static bool rcheevos_timer_check(void* userdata)
@@ -1312,8 +1318,17 @@ static void rcheevos_initialize_runtime_callback(void* userdata)
 
 static void rcheevos_fetch_game_data(void)
 {
+   if (rcheevos_locals.load_info.state == RCHEEVOS_LOAD_STATE_NETWORK_ERROR)
+   {
+      strlcpy(rcheevos_locals.game.hash,
+         msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE),
+         sizeof(rcheevos_locals.game.hash));
+      rcheevos_pause_hardcore();
+      return;
+   }
+
    if (!rcheevos_locals.load_info.game_identified ||
-       !rcheevos_locals.load_info.user_logged_in)
+      !rcheevos_locals.load_info.user_logged_in)
    {
       /* all initial tasks have not yet completed */
       return;
