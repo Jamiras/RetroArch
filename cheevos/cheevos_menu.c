@@ -567,6 +567,19 @@ void rcheevos_menu_populate(void* data)
             RCHEEVOS_MENUITEM_BUCKET_UNOFFICIAL);
    }
 
+   /* unsupported */
+   if (num_unsupported)
+   {
+      if (rcheevos_locals->menuitem_count > 0)
+      {
+         rcheevos_menu_append_header(rcheevos_locals,
+            MENU_ENUM_LABEL_VALUE_CHEEVOS_UNSUPPORTED_ENTRY);
+      }
+
+      rcheevos_menu_append_items(rcheevos_locals,
+         RCHEEVOS_MENUITEM_BUCKET_UNSUPPORTED);
+   }
+
    /* unlocked */
    if (num_unlocked)
    {

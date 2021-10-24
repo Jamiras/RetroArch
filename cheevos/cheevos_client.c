@@ -1164,8 +1164,8 @@ void rcheevos_client_start_session(unsigned game_id)
          rcheevos_async_begin_request(request,
             rcheevos_async_start_session_callback,
             CHEEVOS_ASYNC_START_SESSION, game_id,
-            "Started session",
-            "Error starting session");
+            "Started session for game",
+            "Error starting session for game");
       }
    }
 }
