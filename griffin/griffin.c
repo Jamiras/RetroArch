@@ -213,7 +213,6 @@ ACHIEVEMENTS
 #include "../deps/rcheevos/src/rcheevos/trigger.c"
 #include "../deps/rcheevos/src/rcheevos/value.c"
 #include "../deps/rcheevos/src/rhash/hash.c"
-#include "../deps/rcheevos/src/rurl/url.c"
 
 #endif
 

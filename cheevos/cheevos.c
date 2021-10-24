@@ -1596,14 +1596,14 @@ bool rcheevos_load(const void *data)
    {
       if (string_is_empty(settings->arrays.cheevos_token))
       {
-         CHEEVOS_LOG(RCHEEVOS_TAG "attempting to login %s (with password)\n",
+         CHEEVOS_LOG(RCHEEVOS_TAG "Attempting to login %s (with password)\n",
                settings->arrays.cheevos_username);
          rcheevos_client_login_with_password(settings->arrays.cheevos_username,
                settings->arrays.cheevos_password, rcheevos_login_callback, NULL);
       }
       else
       {
-         CHEEVOS_LOG(RCHEEVOS_TAG "attempting to login %s (with token)\n",
+         CHEEVOS_LOG(RCHEEVOS_TAG "Attempting to login %s (with token)\n",
                settings->arrays.cheevos_username);
          rcheevos_client_login_with_token(settings->arrays.cheevos_username,
                settings->arrays.cheevos_token, rcheevos_login_callback, NULL);
