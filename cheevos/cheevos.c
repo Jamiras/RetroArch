@@ -91,6 +91,7 @@ static rcheevos_locals_t rcheevos_locals =
    0,    /* menuitem_capacity */
    0,    /* menuitem_count */
 #endif
+   {0},  /* load_info */
    false,/* hardcore_active */
    false,/* loaded */
    true, /* core_supports */
@@ -104,18 +105,7 @@ rcheevos_locals_t* get_rcheevos_locals(void)
    return &rcheevos_locals;
 }
 
-#ifdef HAVE_THREADS
-#define CHEEVOS_LOCK(l)   do { slock_lock(l); } while (0)
-#define CHEEVOS_UNLOCK(l) do { slock_unlock(l); } while (0)
-#else
-#define CHEEVOS_LOCK(l)
-#define CHEEVOS_UNLOCK(l)
-#endif
-
 #define CHEEVOS_MB(x)   ((x) * 1024 * 1024)
-
-/* Forward declaration */
-static void rcheevos_validate_memrefs(rcheevos_locals_t* locals);
 
 /*****************************************************************************
 Supporting functions.
@@ -561,6 +551,7 @@ bool rcheevos_load_aborted(void)
    }
 }
 
+#ifdef HAVE_THREADS
 static bool rcheevos_timer_check(void* userdata)
 {
    retro_time_t stop_time = *(retro_time_t*)userdata;
@@ -568,6 +559,7 @@ static bool rcheevos_timer_check(void* userdata)
 
    return (now < stop_time);
 }
+#endif
 
 bool rcheevos_unload(void)
 {
@@ -693,7 +685,7 @@ static void rcheevos_activate_leaderboards()
    }
 }
 
-static void rcheevos_deactivate_leaderboards(s)
+static void rcheevos_deactivate_leaderboards()
 {
    rcheevos_ralboard_t* lboard = rcheevos_locals.game.leaderboards;
    rcheevos_ralboard_t* stop = lboard + rcheevos_locals.game.leaderboard_count;

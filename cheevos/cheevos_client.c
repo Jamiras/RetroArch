@@ -18,12 +18,15 @@
 #include "cheevos.h"
 
 #include "../configuration.h"
+#include "../file_path_special.h"
 #include "../paths.h"
 #include "../retroarch.h"
 #include "../version.h"
 
-#include <string/stdstring.h>
 #include <features/features_cpu.h>
+#include <file/file_path.h>
+#include <streams/file_stream.h>
+#include <string/stdstring.h>
 
 #include "../frontend/frontend_driver.h"
 #include "../network/net_http_special.h"
@@ -461,13 +464,14 @@ static void rcheevos_async_http_task_callback(
          case CHEEVOS_ASYNC_RESOLVE_HASH:
             if (error)
             {
+               rcheevos_locals_t* rcheevos_locals = get_rcheevos_locals();
                size_t len = 0;
                char* ptr;
 
-               if (rcheevos_locals.load_info.state == RCHEEVOS_LOAD_STATE_NETWORK_ERROR)
+               if (rcheevos_locals->load_info.state == RCHEEVOS_LOAD_STATE_NETWORK_ERROR)
                   break;
 
-               rcheevos_locals.load_info.state = RCHEEVOS_LOAD_STATE_NETWORK_ERROR;
+               rcheevos_locals->load_info.state = RCHEEVOS_LOAD_STATE_NETWORK_ERROR;
 
                while (request->request.url[len] != '/' || /* find the first single slash */
                   request->request.url[len + 1] == '/' ||
@@ -882,8 +886,9 @@ static void rcheevos_async_fetch_game_data_callback(struct rcheevos_async_io_req
    int result = rc_api_process_fetch_game_data_response(&runtime_data->game_data, data->data);
    if (rcheevos_async_succeeded(result, &runtime_data->game_data.response, buffer, buffer_size))
    {
-      rcheevos_locals.game.title = strdup(runtime_data->game_data.title);
-      rcheevos_locals.game.console_id = runtime_data->game_data.console_id;
+      rcheevos_locals_t* rcheevos_locals = get_rcheevos_locals();
+      rcheevos_locals->game.title = strdup(runtime_data->game_data.title);
+      rcheevos_locals->game.console_id = runtime_data->game_data.console_id;
    }
 
    runtime_data->have_game_data = true;
@@ -1252,19 +1257,21 @@ static void rcheevos_async_download_next_badge(void* userdata)
 
    if (!rcheevos_load_aborted())
    {
+      const rcheevos_locals_t* rcheevos_locals = get_rcheevos_locals();
+
       /* fetch badges for current state of achievements first */
-      while (state->locked_badge_fetch_index < rcheevos_locals.game.achievement_count)
+      while (state->locked_badge_fetch_index < rcheevos_locals->game.achievement_count)
       {
-         const rcheevos_racheevo_t* cheevo = &rcheevos_locals.game.achievements[state->locked_badge_fetch_index++];
+         const rcheevos_racheevo_t* cheevo = &rcheevos_locals->game.achievements[state->locked_badge_fetch_index++];
          const int active = (cheevo->active & (RCHEEVOS_ACTIVE_HARDCORE | RCHEEVOS_ACTIVE_SOFTCORE));
          if (rcheevos_client_fetch_badge(cheevo->badge, active, state))
             return;
       }
 
       /* then fetch badges for unlocked state so they're ready when the user unlocks something */
-      while (state->badge_fetch_index < rcheevos_locals.game.achievement_count)
+      while (state->badge_fetch_index < rcheevos_locals->game.achievement_count)
       {
-         const rcheevos_racheevo_t* cheevo = &rcheevos_locals.game.achievements[state->badge_fetch_index++];
+         const rcheevos_racheevo_t* cheevo = &rcheevos_locals->game.achievements[state->badge_fetch_index++];
          if (rcheevos_client_fetch_badge(cheevo->badge, 0, state))
             return;
       }
