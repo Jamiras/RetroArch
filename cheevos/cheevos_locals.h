@@ -114,8 +114,10 @@ typedef struct rcheevos_load_info_t
 {
    enum rcheevos_load_state state;
    int  hashes_tried;
-   bool game_identified;
-   bool user_logged_in;
+   int  outstanding_requests;
+#ifdef HAVE_THREADS
+   slock_t* request_lock;
+#endif
 } rcheevos_load_info_t;
 
 typedef struct rcheevos_game_info_t
@@ -177,6 +179,8 @@ typedef struct rcheevos_locals_t
 } rcheevos_locals_t;
 
 rcheevos_locals_t* get_rcheevos_locals(void);
+void rcheevos_begin_load_state(enum rcheevos_load_state state);
+int rcheevos_end_load_state(void);
 bool rcheevos_load_aborted(void);
 
 RETRO_END_DECLS

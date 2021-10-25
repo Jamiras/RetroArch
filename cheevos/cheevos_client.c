@@ -661,6 +661,7 @@ void rcheevos_client_identify_game(const char* hash, rcheevos_client_callback ca
       request->callback = callback;
       request->callback_data = userdata;
 
+      rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_IDENTIFYING_GAME);
       rcheevos_async_begin_request(request,
          rcheevos_async_resolve_hash_callback,
          CHEEVOS_ASYNC_RESOLVE_HASH, 0,
@@ -681,10 +682,6 @@ typedef struct rcheevos_async_initialize_runtime_data_t
 
    rcheevos_client_callback callback;
    void* callback_data;
-
-   bool have_game_data;
-   bool have_hardcore_unlocks;
-   bool have_non_hardcore_unlocks;
 } rcheevos_async_initialize_runtime_data_t;
 
 static void rcheevos_client_copy_achievements(rcheevos_async_initialize_runtime_data_t* runtime_data)
@@ -828,12 +825,8 @@ static void rcheevos_client_initialize_runtime_callback(void* userdata)
 {
    rcheevos_async_initialize_runtime_data_t* runtime_data = (rcheevos_async_initialize_runtime_data_t*)userdata;
 
-   if (!runtime_data->have_game_data ||
-       !runtime_data->have_hardcore_unlocks ||
-       !runtime_data->have_non_hardcore_unlocks)
-   {
+   if (rcheevos_end_load_state() > 0)
       return;
-   }
 
    if (!rcheevos_load_aborted())
    {
@@ -862,15 +855,11 @@ static void rcheevos_async_fetch_user_unlocks_callback(struct rcheevos_async_io_
    {
       result = rc_api_process_fetch_user_unlocks_response(&runtime_data->hardcore_unlocks, data->data);
       rcheevos_async_succeeded(result, &runtime_data->hardcore_unlocks.response, buffer, buffer_size);
-
-      runtime_data->have_hardcore_unlocks = true;
    }
    else
    {
       result = rc_api_process_fetch_user_unlocks_response(&runtime_data->non_hardcore_unlocks, data->data);
       rcheevos_async_succeeded(result, &runtime_data->non_hardcore_unlocks.response, buffer, buffer_size);
-
-      runtime_data->have_non_hardcore_unlocks = true;
    }
 }
 
@@ -890,8 +879,6 @@ static void rcheevos_async_fetch_game_data_callback(struct rcheevos_async_io_req
       rcheevos_locals->game.title = strdup(runtime_data->game_data.title);
       rcheevos_locals->game.console_id = runtime_data->game_data.console_id;
    }
-
-   runtime_data->have_game_data = true;
 }
 
 void rcheevos_client_initialize_runtime(unsigned game_id, rcheevos_client_callback callback, void* userdata)
@@ -907,10 +894,6 @@ void rcheevos_client_initialize_runtime(unsigned game_id, rcheevos_client_callba
       CHEEVOS_LOG(RCHEEVOS_TAG "Failed to allocate runtime initalization data\n");
       return;
    }
-
-   data->have_game_data = false;
-   data->have_hardcore_unlocks = false;
-   data->have_non_hardcore_unlocks = false;
 
    data->callback = callback;
    data->callback_data = userdata;
@@ -960,6 +943,7 @@ void rcheevos_client_initialize_runtime(unsigned game_id, rcheevos_client_callba
       request->callback = rcheevos_client_initialize_runtime_callback;
       request->callback_data = data;
 
+      rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_FETCHING_GAME_DATA);
       rcheevos_async_begin_request(request,
          rcheevos_async_fetch_game_data_callback,
          CHEEVOS_ASYNC_FETCH_GAME_DATA, rcheevos_locals->game.id,
@@ -974,11 +958,7 @@ void rcheevos_client_initialize_runtime(unsigned game_id, rcheevos_client_callba
       memset(&data->non_hardcore_unlocks, 0, sizeof(data->non_hardcore_unlocks));
 
       data->hardcore_unlocks.num_achievement_ids = 0;
-      data->have_hardcore_unlocks = true;
       data->non_hardcore_unlocks.num_achievement_ids = 0;
-      data->have_non_hardcore_unlocks = true;
-
-      rcheevos_client_initialize_runtime_callback(data);
    }
    else
    {
@@ -1005,6 +985,7 @@ void rcheevos_client_initialize_runtime(unsigned game_id, rcheevos_client_callba
             request->callback = rcheevos_client_initialize_runtime_callback;
             request->callback_data = data;
 
+            rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_FETCHING_GAME_DATA);
             if (i == 0)
             {
                rcheevos_async_begin_request(request,
@@ -1190,7 +1171,25 @@ typedef struct rcheevos_fetch_badge_data
    char                     badge_fullpath[4096];
 } rcheevos_fetch_badge_data;
 
-static void rcheevos_async_download_next_badge(void* userdata);
+static bool rcheevos_fetch_next_badge(rcheevos_fetch_badge_data* state);
+
+static void rcheevos_end_fetch_badges(rcheevos_fetch_badge_data* state)
+{
+   if (state->callback)
+      state->callback(state->callback_data);
+
+   free((void*)state->badge_directory);
+   free(state);
+}
+
+static void rcheevos_async_download_next_badge(void* userdata)
+{
+   rcheevos_fetch_badge_data* state = (rcheevos_fetch_badge_data*)userdata;
+   rcheevos_fetch_next_badge(state);
+
+   if (rcheevos_end_load_state() == 0)
+      rcheevos_end_fetch_badges(state);
+}
 
 static void rcheevos_async_fetch_badge_callback(struct rcheevos_async_io_request* request,
    http_transfer_data_t* data, char buffer[], size_t buffer_size)
@@ -1241,6 +1240,7 @@ static bool rcheevos_client_fetch_badge(const char* badge_name, int locked, rche
          request->callback = rcheevos_async_download_next_badge;
          request->callback_data = state;
 
+         rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_FETCHING_BADGES);
          rcheevos_async_begin_request(request,
             rcheevos_async_fetch_badge_callback,
             CHEEVOS_ASYNC_FETCH_BADGE, atoi(badge_name), NULL,
@@ -1251,10 +1251,8 @@ static bool rcheevos_client_fetch_badge(const char* badge_name, int locked, rche
    return true;
 }
 
-static void rcheevos_async_download_next_badge(void* userdata)
+static bool rcheevos_fetch_next_badge(rcheevos_fetch_badge_data* state)
 {
-   rcheevos_fetch_badge_data* state = (rcheevos_fetch_badge_data*)userdata;
-
    if (!rcheevos_load_aborted())
    {
       const rcheevos_locals_t* rcheevos_locals = get_rcheevos_locals();
@@ -1265,7 +1263,7 @@ static void rcheevos_async_download_next_badge(void* userdata)
          const rcheevos_racheevo_t* cheevo = &rcheevos_locals->game.achievements[state->locked_badge_fetch_index++];
          const int active = (cheevo->active & (RCHEEVOS_ACTIVE_HARDCORE | RCHEEVOS_ACTIVE_SOFTCORE));
          if (rcheevos_client_fetch_badge(cheevo->badge, active, state))
-            return;
+            return true;
       }
 
       /* then fetch badges for unlocked state so they're ready when the user unlocks something */
@@ -1273,15 +1271,11 @@ static void rcheevos_async_download_next_badge(void* userdata)
       {
          const rcheevos_racheevo_t* cheevo = &rcheevos_locals->game.achievements[state->badge_fetch_index++];
          if (rcheevos_client_fetch_badge(cheevo->badge, 0, state))
-            return;
+            return true;
       }
-
-      if (state->callback)
-         state->callback(state->callback_data);
    }
 
-   free((void*)state->badge_directory);
-   free(state);
+   return false;
 }
 
 void rcheevos_client_fetch_badges(rcheevos_client_callback callback, void* userdata)
@@ -1318,18 +1312,33 @@ void rcheevos_client_fetch_badges(rcheevos_client_callback callback, void* userd
    }
    else
    {
+#ifdef HAVE_THREADS
+      int num_concurrent = 3;
+#else
+      int num_concurrent = 1;
+#endif
+
       state->badge_directory = strdup(badge_fullpath);
       state->locked_badge_fetch_index = 0;
       state->badge_fetch_index = 0;
       state->callback = callback;
       state->callback_data = userdata;
 
+      rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_FETCHING_BADGES);
+
       /* fetch the placeholder image */
-      if (!rcheevos_client_fetch_badge("00000", 0, state))
+      if (rcheevos_client_fetch_badge("00000", 0, state))
+         num_concurrent--;
+
+      /* queue up additional requests so up to {num_concurrent} downloads are queued */
+      while (num_concurrent--)
       {
-         /* placeholder already downloaded, proceed to achievement badges */
-         rcheevos_async_download_next_badge(state);
+         if (!rcheevos_fetch_next_badge(state))
+            break;
       }
+
+      if (rcheevos_end_load_state() == 0)
+         rcheevos_end_fetch_badges(state);
    }
 #endif /* defined(HAVE_MENU) || defined(HAVE_GFX_WIDGETS) */
 }

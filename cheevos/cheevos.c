@@ -105,6 +105,14 @@ rcheevos_locals_t* get_rcheevos_locals(void)
    return &rcheevos_locals;
 }
 
+#ifdef HAVE_THREADS
+#define CHEEVOS_LOCK(l)   do { slock_lock(l); } while (0)
+#define CHEEVOS_UNLOCK(l) do { slock_unlock(l); } while (0)
+#else
+#define CHEEVOS_LOCK(l)
+#define CHEEVOS_UNLOCK(l)
+#endif
+
 #define CHEEVOS_MB(x)   ((x) * 1024 * 1024)
 
 /*****************************************************************************
@@ -535,20 +543,6 @@ void rcheevos_pause_hardcore(void)
 {
    if (rcheevos_locals.hardcore_active)
       rcheevos_toggle_hardcore_paused();
-}
-
-bool rcheevos_load_aborted(void)
-{
-   switch (rcheevos_locals.load_info.state)
-   {
-      case RCHEEVOS_LOAD_STATE_ABORTED:       /* unload has been called */
-      case RCHEEVOS_LOAD_STATE_NONE:          /* unload quit waiting and ran to completion */
-      case RCHEEVOS_LOAD_STATE_NETWORK_ERROR: /* login/resolve hash failed after several attempts */
-         return true;
-
-      default:
-         return false;
-   }
 }
 
 #ifdef HAVE_THREADS
@@ -1243,13 +1237,24 @@ static void rcheevos_show_game_placard()
       runloop_msg_queue_push(msg, 0, 3 * 60, false, NULL, MESSAGE_QUEUE_ICON_DEFAULT, MESSAGE_QUEUE_CATEGORY_INFO);
 }
 
-static void rcheevos_fetch_badges_callback(void* userdata)
+static void rcheevos_end_load(void)
 {
    CHEEVOS_LOG(RCHEEVOS_TAG "Load finished\n");
    rcheevos_locals.load_info.state = RCHEEVOS_LOAD_STATE_DONE;
 }
 
-static void rcheevos_initialize_runtime_callback(void* userdata)
+static void rcheevos_fetch_badges_callback(void* userdata)
+{
+   rcheevos_end_load();
+}
+
+static void rcheevos_fetch_badges(void)
+{
+   /* this function manages the RCHEEVOS_LOAD_STATE_FETCHING_BADGES state */
+   rcheevos_client_fetch_badges(rcheevos_fetch_badges_callback, NULL);
+}
+
+static void rcheevos_start_session(void)
 {
    if (rcheevos_load_aborted())
       return;
@@ -1266,7 +1271,7 @@ static void rcheevos_initialize_runtime_callback(void* userdata)
       }
    }
 
-   rcheevos_locals.load_info.state = RCHEEVOS_LOAD_STATE_STARTING_SESSION;
+   rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_STARTING_SESSION);
 
    /* activate the achievements and leaderboards (rich presence has already been activated) */
    rcheevos_activate_achievements();
@@ -1292,6 +1297,7 @@ static void rcheevos_initialize_runtime_callback(void* userdata)
    }
 #endif
 
+   /* we don't have to wait for this to complete to proceed to the next loading state */
    rcheevos_client_start_session(rcheevos_locals.game.id);
 
    rcheevos_validate_memrefs(&rcheevos_locals);
@@ -1301,8 +1307,13 @@ static void rcheevos_initialize_runtime_callback(void* userdata)
 
    rcheevos_show_game_placard();
 
-   rcheevos_locals.load_info.state = RCHEEVOS_LOAD_STATE_FETCHING_BADGES;
-   rcheevos_client_fetch_badges(rcheevos_fetch_badges_callback, NULL);
+   if (rcheevos_end_load_state() == 0)
+      rcheevos_fetch_badges();
+}
+
+static void rcheevos_initialize_runtime_callback(void* userdata)
+{
+   rcheevos_start_session();
 }
 
 static void rcheevos_fetch_game_data(void)
@@ -1313,13 +1324,6 @@ static void rcheevos_fetch_game_data(void)
          msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE),
          sizeof(rcheevos_locals.game.hash));
       rcheevos_pause_hardcore();
-      return;
-   }
-
-   if (!rcheevos_locals.load_info.game_identified ||
-      !rcheevos_locals.load_info.user_logged_in)
-   {
-      /* all initial tasks have not yet completed */
       return;
    }
 
@@ -1354,7 +1358,7 @@ static void rcheevos_fetch_game_data(void)
    }
 
    /* fetch the game data and the user unlocks */
-   rcheevos_locals.load_info.state = RCHEEVOS_LOAD_STATE_FETCHING_GAME_DATA;
+   rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_FETCHING_GAME_DATA);
 
 #if HAVE_REWIND
    if (!rcheevos_locals.hardcore_active)
@@ -1380,6 +1384,9 @@ static void rcheevos_fetch_game_data(void)
 #endif
 
    rcheevos_client_initialize_runtime(rcheevos_locals.game.id, rcheevos_initialize_runtime_callback, NULL);
+
+   if (rcheevos_end_load_state() == 0)
+      rcheevos_start_session();
 }
 
 struct rcheevos_identify_game_data
@@ -1408,8 +1415,8 @@ static void rcheevos_identify_game_callback(void* userdata)
    }
 
    /* hash resolution complete, proceed to fetching game data */
-   rcheevos_locals.load_info.game_identified = true;
-   rcheevos_fetch_game_data();
+   if (rcheevos_end_load_state() == 0)
+      rcheevos_fetch_game_data();
 }
 
 static bool rcheevos_identify_game(const struct retro_game_info* info)
@@ -1481,8 +1488,45 @@ static void rcheevos_login_callback(void* userdata)
       }
    }
 
-   rcheevos_locals.load_info.user_logged_in = true;
-   rcheevos_fetch_game_data();
+   if (rcheevos_end_load_state() == 0)
+      rcheevos_fetch_game_data();
+}
+
+/* increment the outstanding requests counter and set the load state */
+void rcheevos_begin_load_state(enum rcheevos_load_state state)
+{
+   CHEEVOS_LOCK(rcheevos_locals.load_info.request_lock);
+   ++rcheevos_locals.load_info.outstanding_requests;
+   rcheevos_locals.load_info.state = state;
+   CHEEVOS_UNLOCK(rcheevos_locals.load_info.request_lock);
+}
+
+/* decrement and return the outstanding requests counter. if non-zero, requests are still outstanding */
+int rcheevos_end_load_state(void)
+{
+   int requests = 0;
+
+   CHEEVOS_LOCK(rcheevos_locals.load_info.request_lock);
+   if (rcheevos_locals.load_info.outstanding_requests > 0)
+      --rcheevos_locals.load_info.outstanding_requests;
+   requests = rcheevos_locals.load_info.outstanding_requests;
+   CHEEVOS_UNLOCK(rcheevos_locals.load_info.request_lock);
+
+   return requests;
+}
+
+bool rcheevos_load_aborted(void)
+{
+   switch (rcheevos_locals.load_info.state)
+   {
+      case RCHEEVOS_LOAD_STATE_ABORTED:       /* unload has been called */
+      case RCHEEVOS_LOAD_STATE_NONE:          /* unload quit waiting and ran to completion */
+      case RCHEEVOS_LOAD_STATE_NETWORK_ERROR: /* login/resolve hash failed after several attempts */
+         return true;
+
+      default:
+         return false;
+   }
 }
 
 bool rcheevos_load(const void *data)
@@ -1495,7 +1539,6 @@ bool rcheevos_load(const void *data)
 
    memset(&rcheevos_locals.load_info, 0, sizeof(rcheevos_locals.load_info));
    rcheevos_locals.loaded             = false;
-   rcheevos_locals.load_info.state    = RCHEEVOS_LOAD_STATE_IDENTIFYING_GAME;
    rcheevos_locals.game.id            = -1;
 #ifdef HAVE_THREADS
    rcheevos_locals.queued_command     = CMD_EVENT_NONE;
@@ -1506,10 +1549,15 @@ bool rcheevos_load(const void *data)
     * disable hardcore and bail */
    if (!cheevos_enable || !rcheevos_locals.core_supports || !data)
    {
-      rcheevos_locals.load_info.state = RCHEEVOS_LOAD_STATE_NONE;
       rcheevos_pause_hardcore();
       return false;
    }
+
+#ifdef HAVE_THREADS
+   if (!rcheevos_locals.load_info.request_lock)
+      rcheevos_locals.load_info.request_lock = slock_new();
+#endif
+   rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_IDENTIFYING_GAME);
 
    /* reset hardcore mode and leaderboard settings based on configs */
    rcheevos_hardcore_enabled_changed();
@@ -1576,16 +1624,14 @@ bool rcheevos_load(const void *data)
    if (!rcheevos_identify_game(info))
    {
       /* no hashes could be generated for the game, disable hardcore and bail */
+      rcheevos_end_load_state();
       rcheevos_pause_hardcore();
       return false;
    }
 
-   if (rcheevos_locals.token[0])
+   if (!rcheevos_locals.token[0])
    {
-      rcheevos_locals.load_info.user_logged_in = true;
-   }
-   else
-   {
+      rcheevos_begin_load_state(RCHEEVOS_LOAD_STATE_IDENTIFYING_GAME);
       if (string_is_empty(settings->arrays.cheevos_token))
       {
          CHEEVOS_LOG(RCHEEVOS_TAG "Attempting to login %s (with password)\n",
@@ -1601,6 +1647,9 @@ bool rcheevos_load(const void *data)
                settings->arrays.cheevos_token, rcheevos_login_callback, NULL);
       }
    }
+
+   if (rcheevos_end_load_state() == 0)
+      rcheevos_fetch_game_data();
 
    return true;
 }
