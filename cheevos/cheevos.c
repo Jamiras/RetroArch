@@ -105,14 +105,6 @@ rcheevos_locals_t* get_rcheevos_locals(void)
    return &rcheevos_locals;
 }
 
-#ifdef HAVE_THREADS
-#define CHEEVOS_LOCK(l)   do { slock_lock(l); } while (0)
-#define CHEEVOS_UNLOCK(l) do { slock_unlock(l); } while (0)
-#else
-#define CHEEVOS_LOCK(l)
-#define CHEEVOS_UNLOCK(l)
-#endif
-
 #define CHEEVOS_MB(x)   ((x) * 1024 * 1024)
 
 /*****************************************************************************

@@ -183,6 +183,14 @@ void rcheevos_begin_load_state(enum rcheevos_load_state state);
 int rcheevos_end_load_state(void);
 bool rcheevos_load_aborted(void);
 
+#ifdef HAVE_THREADS
+ #define CHEEVOS_LOCK(l)   do { slock_lock(l); } while (0)
+ #define CHEEVOS_UNLOCK(l) do { slock_unlock(l); } while (0)
+#else
+ #define CHEEVOS_LOCK(l)
+ #define CHEEVOS_UNLOCK(l)
+#endif
+
 RETRO_END_DECLS
 
 #endif /* __RARCH_CHEEVOS_LOCALS_H */
