@@ -1249,7 +1249,10 @@ static void rcheevos_fetch_badges(void)
 static void rcheevos_start_session(void)
 {
    if (rcheevos_load_aborted())
+   {
+      CHEEVOS_LOG(RCHEEVOS_TAG "Load aborted before starting session\n");
       return;
+   }
 
    if (rcheevos_locals.game.achievement_count == 0 &&
       rcheevos_locals.game.leaderboard_count == 0)

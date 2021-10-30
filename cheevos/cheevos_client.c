@@ -374,6 +374,7 @@ static void rcheevos_async_http_task_callback(
 
    if (rcheevos_load_aborted())
    {
+      CHEEVOS_LOG(RCHEEVOS_TAG "Load aborted\n");
       rc_api_destroy_request(&request->request);
       free(request);
       return;
@@ -1162,7 +1163,7 @@ void rcheevos_client_start_session(unsigned game_id)
  ****************************/
 
 #ifdef HAVE_THREADS
- #define RCHEEVOS_CONCURRENT_BADGE_DOWNLOADS 3
+ #define RCHEEVOS_CONCURRENT_BADGE_DOWNLOADS 2
 #else
  #define RCHEEVOS_CONCURRENT_BADGE_DOWNLOADS 1
 #endif
@@ -1265,9 +1266,19 @@ static bool rcheevos_client_fetch_badge(const char* badge_name, int locked, rche
             break;
          }
       }
-      if (found_index == -1)
-         strlcpy(state->requested_badges[request_index], badge_fullname, sizeof(state->requested_badges[request_index]));
 
+      if (found_index == -1)
+      {
+         if (request_index == -1)
+         {
+            /* unexpected - but if it happens, the queue is full. pretend we found a match to prevent an exception */
+            found_index = 0;
+         }
+         else
+         {
+            strlcpy(state->requested_badges[request_index], badge_fullname, sizeof(state->requested_badges[request_index]));
+         }
+      }
       CHEEVOS_UNLOCK(rcheevos_locals->load_info.request_lock);
 
       if (found_index != -1)
@@ -1318,7 +1329,11 @@ static bool rcheevos_client_fetch_badge(const char* badge_name, int locked, rche
 
 static bool rcheevos_fetch_next_badge(rcheevos_fetch_badge_state* state)
 {
-   if (!rcheevos_load_aborted())
+   if (rcheevos_load_aborted())
+   {
+      CHEEVOS_LOG(RCHEEVOS_TAG "Load aborted while fetching badges\n");
+   }
+   else
    {
       const rcheevos_locals_t* rcheevos_locals = get_rcheevos_locals();
       const rcheevos_racheevo_t* cheevo = NULL;
