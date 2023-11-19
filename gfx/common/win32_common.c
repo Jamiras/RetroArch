@@ -63,6 +63,10 @@
 #include "../../menu/menu_driver.h"
 #endif
 
+#ifdef HAVE_CHEEVOS
+#include "../../cheevos/cheevos_menu.h"
+#endif
+
 #include <encodings/utf.h>
 
 /* Assume W-functions do not work below Win2K and Xbox platforms */
@@ -851,6 +855,13 @@ static LRESULT win32_menu_loop(HWND owner, WPARAM wparam)
             configuration_set_int(
                   settings, settings->ints.state_slot, idx);
          }
+#ifdef HAVE_CHEEVOS
+ #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+         else if (rcheevos_activate_integration_menu_item(mode))
+         {
+         }
+ #endif
+#endif
          break;
    }
 
@@ -1833,6 +1844,13 @@ bool win32_window_create(void *data, unsigned style,
                window_opacity) / 100, LWA_ALPHA);
    }
 #endif
+
+#ifdef HAVE_CHEEVOS
+ #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+   rcheevos_update_hwnd(main_window.hwnd);
+ #endif
+#endif
+
    return true;
 }
 #endif
@@ -2430,6 +2448,12 @@ void win32_set_window(unsigned *width, unsigned *height,
 {
    RECT *rect            = (RECT*)rect_data;
 
+#ifdef HAVE_CHEEVOS
+ #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+   rcheevos_update_hwnd(main_window.hwnd);
+ #endif
+#endif
+
    if (!fullscreen || windowed_full)
    {
       settings_t *settings      = config_get_ptr();
@@ -2449,6 +2473,12 @@ void win32_set_window(unsigned *width, unsigned *height,
          menuItem = LoadMenuA(GetModuleHandle(NULL), MAKEINTRESOURCE(IDR_MENU));
          win32_localize_menu(menuItem);
          SetMenu(main_window.hwnd, menuItem);
+
+#ifdef HAVE_CHEEVOS
+ #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+         rcheevos_append_integration_menu(menuItem);
+ #endif
+#endif
 
          SendMessage(main_window.hwnd, WM_NCCALCSIZE, FALSE, (LPARAM)&rc_temp);
          g_win32_resize_height = *height += rc_temp.top + rect->top;

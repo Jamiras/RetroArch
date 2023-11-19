@@ -531,6 +531,36 @@ uintptr_t rcheevos_get_badge_texture(const char* badge, bool locked, bool downlo
    return tex;
 }
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+
+void rcheevos_update_hwnd(HWND hWnd)
+{
+   rc_client_raintegration_update_main_window_handle(rcheevos_locals.client, hWnd);
+}
+
+void rcheevos_append_integration_menu(HMENU hMenu)
+{
+   rc_client_raintegration_rebuild_submenu(rcheevos_locals.client, hMenu);
+}
+
+void rcheevos_rebuild_integration_menu()
+{
+   if (rcheevos_locals.client->state.raintegration &&
+       rcheevos_locals.client->state.raintegration->hPopupMenu)
+   {
+      HWND hWnd = (HWND)video_driver_window_get();
+      rc_client_raintegration_rebuild_submenu(rcheevos_locals.client, GetMenu(hWnd));
+      //DrawMenuBar(hWnd);
+   }
+}
+
+bool rcheevos_activate_integration_menu_item(uint32_t nMenuItemId)
+{
+   return rc_client_raintegration_activate_menu_item(rcheevos_locals.client, nMenuItemId);
+}
+
+#endif /* RC_CLIENT_SUPPORTS_RAINTEGRATION */
+
 #else /* !HAVE_RC_CLIENT */
 
 enum rcheevos_menuitem_bucket

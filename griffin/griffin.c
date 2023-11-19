@@ -195,6 +195,10 @@ ACHIEVEMENTS
 #define RC_NO_THREADS 1
 #endif
 
+#if defined(_WIN32)
+#define RC_CLIENT_SUPPORTS_RAINTEGRATION
+#endif
+
 #include "../libretro-common/formats/cdfs/cdfs.c"
 #include "../network/net_http_special.c"
 
@@ -226,6 +230,10 @@ ACHIEVEMENTS
 #include "../deps/rcheevos/src/rhash/aes.c"
 #include "../deps/rcheevos/src/rhash/cdreader.c"
 #include "../deps/rcheevos/src/rhash/hash.c"
+
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+#include "../deps/rcheevos/src/rc_client_raintegration.c"
+#endif
 
 #endif
 

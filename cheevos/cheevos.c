@@ -31,6 +31,7 @@
 #include <net/net_http.h>
 #include <libretro.h>
 #include <lrc_hash.h>
+#include <gfx/common/win32_common.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -70,9 +71,11 @@
 #include "../runtime_file.h"
 #include "../core.h"
 #include "../core_option_manager.h"
+#include "../version.h"
 
 #include "../tasks/tasks_internal.h"
 
+#include "../deps/rcheevos/include/rc_client_raintegration.h"
 #include "../deps/rcheevos/include/rc_runtime.h"
 #include "../deps/rcheevos/include/rc_runtime_types.h"
 #include "../deps/rcheevos/include/rc_hash.h"
@@ -3103,6 +3106,104 @@ bool rcheevos_load_aborted(void)
 
 #endif /* HAVE_RC_CLIENT */
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+
+static void rc_client_raintegration_hardcore_changed(rc_client_t* client)
+{
+   const bool hardcore_enabled = rc_client_get_hardcore_enabled(client);
+   if (hardcore_enabled)
+   {
+      if (rcheevos_locals.hardcore_allowed)
+      {
+         rcheevos_validate_config_settings();
+         if (rcheevos_locals.hardcore_allowed)
+         {
+            cheat_manager_apply_cheats();
+            if (rcheevos_locals.hardcore_allowed)
+               rcheevos_enforce_hardcore_settings();
+         }
+      }
+
+      if (!rcheevos_locals.hardcore_allowed)
+      {
+         /* local setting prevented hardcore enablement - message should
+          * have been displayed */
+         rc_client_set_hardcore_enabled(client, false);
+         return;
+      }
+   }
+
+   {
+      settings_t* settings = config_get_ptr();
+      settings->bools.cheevos_hardcore_mode_enable = hardcore_enabled;
+
+      bool rewind_enable = settings->bools.rewind_enable;
+      if (rewind_enable)
+      {
+         const enum event_command cmd = hardcore_enabled ?
+            CMD_EVENT_REWIND_DEINIT : CMD_EVENT_REWIND_INIT;
+
+#ifdef HAVE_THREADS
+         if (!task_is_on_main_thread())
+         {
+            /* have to "schedule" this.
+             * CMD_EVENT_REWIND_DEINIT should
+             * only be called on the main thread */
+            rcheevos_locals.queued_command = cmd;
+         }
+         else
+#endif
+            command_event(cmd, NULL);
+      }
+   }
+}
+
+static void rcheevos_raintegration_event_handler(const rc_client_raintegration_event_t* event, rc_client_t* client)
+{
+   switch (event->type)
+   {
+      case RC_CLIENT_RAINTEGRATION_EVENT_MENUITEM_CHECKED_CHANGED:
+         rc_client_raintegration_update_menu_item(client, event->menu_item);
+         break;
+      case RC_CLIENT_RAINTEGRATION_EVENT_PAUSE:
+         command_event(CMD_EVENT_PAUSE, NULL); /* pause the game */
+         break;
+      case RC_CLIENT_RAINTEGRATION_EVENT_HARDCORE_CHANGED:
+         rc_client_raintegration_hardcore_changed(client);
+         break;
+      default:
+#ifndef NDEBUG
+         CHEEVOS_LOG(RCHEEVOS_TAG "Unsupported raintegration event %u\n", event->type);
+#endif
+         break;
+   }
+}
+
+static void rcheevos_load_raintegration_callback(int result,
+   const char* error_message, rc_client_t* client, void* userdata)
+{
+   struct retro_game_info* info = (struct retro_game_info*)userdata;
+
+   rc_client_raintegration_set_event_handler(client, rcheevos_raintegration_event_handler);
+
+   rcheevos_load(info);
+
+   if (info->path)
+      free((void*)info->path);
+   if (info->data)
+      free((void*)info->data);
+   free(info);
+
+   /* the raintegration initialization process may start before the window is created.
+    * ensure the handle is correct */
+   rc_client_raintegration_update_main_window_handle(rcheevos_locals.client, win32_get_window());
+
+   /* initialization has finished, the menu can be populated now */
+   rcheevos_rebuild_integration_menu();
+}
+
+#endif
+
 bool rcheevos_load(const void *data)
 {
    const struct retro_game_info *info = (const struct retro_game_info*)data;
@@ -3183,6 +3284,27 @@ bool rcheevos_load(const void *data)
       }
 
       rcheevos_client_download_placeholder_badge();
+
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+      {
+         struct retro_game_info* info_copy = (struct retro_game_info*)
+            calloc(1, sizeof(*info));
+         info_copy->path = (info->path) ? strdup(info->path) : NULL;
+         if (info->data)
+         {
+            info_copy->data = malloc(info->size);
+            memcpy((void*)info_copy->data, info->data, info->size);
+            info_copy->size = info->size;
+         }
+
+         // TODO: use local path
+         rc_client_begin_load_raintegration(rcheevos_locals.client,
+               L"E:\\Source\\RetroAchievements\\RAIntegration\\bin\\x64\\Debug",
+               (HWND)video_driver_window_get(), "RetroArch", PACKAGE_VERSION,
+               rcheevos_load_raintegration_callback, info_copy);
+         return true;
+      }
+#endif
    }
 
    rc_client_set_hardcore_enabled(rcheevos_locals.client, settings->bools.cheevos_hardcore_mode_enable);
