@@ -3184,6 +3184,24 @@ static void rcheevos_load_raintegration_callback(int result,
 {
    struct retro_game_info* info = (struct retro_game_info*)userdata;
 
+#ifndef HAVE_SSL
+   /* raintegration will provide its own host information. if it provides an SSL host
+    * and we can't make SSL calls, change it to a non-SSL request and cross our fingers */
+   char url[256] = "";
+   if (rc_client_achievement_get_image_url(NULL, RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED, url, sizeof(url)) == RC_OK &&
+      strncmp(url, "https://", 8) == 0)
+   {
+      char* ptr = &url[7], ch;
+      url[4] = ':';
+      url[5] = '/';
+      url[6] = '/';
+      while ((ch = ptr[1]) != '/')
+         *ptr++ = ch;
+      *ptr = '\0';
+      rc_api_set_image_host(url);
+   }
+#endif
+
    rc_client_raintegration_set_event_handler(client, rcheevos_raintegration_event_handler);
 
    rcheevos_load(info);
