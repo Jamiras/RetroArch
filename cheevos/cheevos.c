@@ -31,7 +31,6 @@
 #include <net/net_http.h>
 #include <libretro.h>
 #include <lrc_hash.h>
-#include <gfx/common/win32_common.h>
 
 #ifdef HAVE_CONFIG_H
 #include "../config.h"
@@ -75,7 +74,11 @@
 
 #include "../tasks/tasks_internal.h"
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
 #include "../deps/rcheevos/include/rc_client_raintegration.h"
+#include <gfx/common/win32_common.h>
+#endif
+
 #include "../deps/rcheevos/include/rc_runtime.h"
 #include "../deps/rcheevos/include/rc_runtime_types.h"
 #include "../deps/rcheevos/include/rc_hash.h"
@@ -3179,6 +3182,30 @@ static void rcheevos_raintegration_event_handler(const rc_client_raintegration_e
    }
 }
 
+static uint32_t rcheevos_raintegration_write_memory(uint32_t address,
+   uint8_t* buffer, uint32_t num_bytes, rc_client_t* client)
+{
+   uint32_t avail;
+   uint8_t* ptr = rc_libretro_memory_find_avail(&rcheevos_locals.memory, address, &avail);
+   if (avail >= num_bytes) {
+      memcpy(ptr, buffer, num_bytes);
+      return num_bytes;
+   }
+
+   if (avail == 0)
+      return 0;
+
+   memcpy(ptr, buffer, avail);
+   return avail + rcheevos_raintegration_write_memory(address + avail, buffer + avail, num_bytes - avail, client);
+}
+
+static void rc_client_raintegration_get_game_name(char* buffer, uint32_t buffer_size, rc_client_t* client)
+{
+   const char* content_path = path_get(RARCH_PATH_CONTENT);
+   snprintf(buffer, buffer_size, path_basename(content_path));
+   path_remove_extension(buffer);
+}
+
 static void rcheevos_load_raintegration_callback(int result,
    const char* error_message, rc_client_t* client, void* userdata)
 {
@@ -3203,6 +3230,8 @@ static void rcheevos_load_raintegration_callback(int result,
 #endif
 
    rc_client_raintegration_set_event_handler(client, rcheevos_raintegration_event_handler);
+   rc_client_raintegration_set_write_memory_function(client, rcheevos_raintegration_write_memory);
+   rc_client_raintegration_set_get_game_name_function(client, rc_client_raintegration_get_game_name);
 
    rcheevos_load(info);
 
