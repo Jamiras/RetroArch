@@ -195,7 +195,7 @@ ACHIEVEMENTS
 #define RC_NO_THREADS 1
 #endif
 
-#if defined(_WIN32)
+#if defined(_WIN32) && !defined(__WINRT__)
 #define RC_CLIENT_SUPPORTS_RAINTEGRATION
 #endif
 
