@@ -3206,32 +3206,57 @@ static void rc_client_raintegration_get_game_name(char* buffer, uint32_t buffer_
    path_remove_extension(buffer);
 }
 
+static void rcheevos_client_process_custom_host()
+{
+   const settings_t* settings = config_get_ptr();
+   const char* host = settings->arrays.cheevos_custom_host;
+   if (!host[0])
+   {
+#ifdef HAVE_SSL
+      host = "https://retroachievements.org";
+#else
+      host = "http://retroachievements.org";
+#endif
+   }
+
+   rc_client_set_host(rcheevos_locals.client, host);
+}
+
 static void rcheevos_load_raintegration_callback(int result,
    const char* error_message, rc_client_t* client, void* userdata)
 {
    struct retro_game_info* info = (struct retro_game_info*)userdata;
 
-#ifndef HAVE_SSL
-   /* raintegration will provide its own host information. if it provides an SSL host
-    * and we can't make SSL calls, change it to a non-SSL request and cross our fingers */
-   char url[256] = "";
-   if (rc_client_achievement_get_image_url(NULL, RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED, url, sizeof(url)) == RC_OK &&
-      strncmp(url, "https://", 8) == 0)
+   if (result == RC_OK)
    {
-      char* ptr = &url[7], ch;
-      url[4] = ':';
-      url[5] = '/';
-      url[6] = '/';
-      while ((ch = ptr[1]) != '/')
-         *ptr++ = ch;
-      *ptr = '\0';
-      rc_api_set_image_host(url);
-   }
+#ifndef HAVE_SSL
+      /* raintegration will provide its own host information. if it provides an SSL host
+       * and we can't make SSL calls, change it to a non-SSL request and cross our fingers */
+      char url[256] = "";
+      if (rc_client_achievement_get_image_url(NULL, RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED, url, sizeof(url)) == RC_OK &&
+         strncmp(url, "https://", 8) == 0)
+      {
+         char* ptr = &url[7], ch;
+         url[4] = ':';
+         url[5] = '/';
+         url[6] = '/';
+         while ((ch = ptr[1]) != '/')
+            *ptr++ = ch;
+         *ptr = '\0';
+         rc_api_set_image_host(url);
+      }
 #endif
 
-   rc_client_raintegration_set_event_handler(client, rcheevos_raintegration_event_handler);
-   rc_client_raintegration_set_write_memory_function(client, rcheevos_raintegration_write_memory);
-   rc_client_raintegration_set_get_game_name_function(client, rc_client_raintegration_get_game_name);
+      rc_client_raintegration_set_event_handler(client, rcheevos_raintegration_event_handler);
+      rc_client_raintegration_set_write_memory_function(client, rcheevos_raintegration_write_memory);
+      rc_client_raintegration_set_get_game_name_function(client, rc_client_raintegration_get_game_name);
+   }
+   else
+   {
+      rcheevos_client_process_custom_host();
+   }
+
+   rcheevos_client_download_placeholder_badge();
 
    rcheevos_load(info);
 
@@ -3241,12 +3266,15 @@ static void rcheevos_load_raintegration_callback(int result,
       free((void*)info->data);
    free(info);
 
-   /* the raintegration initialization process may start before the window is created.
-    * ensure the handle is correct */
-   rc_client_raintegration_update_main_window_handle(rcheevos_locals.client, win32_get_window());
+   if (result == RC_OK)
+   {
+      /* the raintegration initialization process may start before the window is created.
+       * ensure the handle is correct */
+      rc_client_raintegration_update_main_window_handle(rcheevos_locals.client, win32_get_window());
 
-   /* initialization has finished, the menu can be populated now */
-   rcheevos_rebuild_integration_menu();
+      /* initialization has finished, the menu can be populated now */
+      rcheevos_rebuild_integration_menu();
+   }
 }
 
 #endif
@@ -3316,22 +3344,6 @@ bool rcheevos_load(const void *data)
       rc_client_set_event_handler(rcheevos_locals.client, rcheevos_client_event_handler);
       rc_client_set_get_time_millisecs_function(rcheevos_locals.client, rcheevos_client_get_time_millisecs);
 
-      {
-         const char* host = settings->arrays.cheevos_custom_host;
-         if (!host[0])
-         {
-#ifdef HAVE_SSL
-            host = "https://retroachievements.org";
-#else
-            host = "http://retroachievements.org";
-#endif
-         }
-
-         rc_client_set_host(rcheevos_locals.client, host);
-      }
-
-      rcheevos_client_download_placeholder_badge();
-
 #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
       {
          struct retro_game_info* info_copy = (struct retro_game_info*)
@@ -3344,6 +3356,12 @@ bool rcheevos_load(const void *data)
             info_copy->size = info->size;
          }
 
+#ifndef HAVE_SSL
+         /* if the dll doesn't specify a custom host and we don't support SSL, we need to use
+          * the non-SSL host. if the dll does specify a custom host, it will overwrite this */
+         rc_client_set_host(rcheevos_locals.client, "http://retroachievements.org");
+#endif
+
          // TODO: use local path
          rc_client_begin_load_raintegration(rcheevos_locals.client,
                L"E:\\Source\\RetroAchievements\\RAIntegration\\bin\\x64\\Debug",
@@ -3352,6 +3370,12 @@ bool rcheevos_load(const void *data)
          return true;
       }
 #endif
+
+      /* set the custom host and download the placeholder dll - this is delayed when using
+       * the integration as it may provide its own custom host */
+      rcheevos_client_process_custom_host();
+
+      rcheevos_client_download_placeholder_badge();
    }
 
    rc_client_set_hardcore_enabled(rcheevos_locals.client, settings->bools.cheevos_hardcore_mode_enable);

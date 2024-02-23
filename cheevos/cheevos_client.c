@@ -175,6 +175,7 @@ static int append_no_spaces(char* buffer, char* stop, const char* text)
 void rcheevos_get_user_agent(rcheevos_locals_t *locals,
       char *buffer, size_t len)
 {
+   char* stop = buffer + len - 1;
    char* ptr;
    struct retro_system_info *sysinfo = &runloop_state_get_ptr()->system.info;
 
@@ -203,7 +204,6 @@ void rcheevos_get_user_agent(rcheevos_locals_t *locals,
    /* if a core is loaded, append its information */
    if (sysinfo && !string_is_empty(sysinfo->library_name))
    {
-      char* stop = buffer + len - 1;
       const char* path = path_get(RARCH_PATH_CORE);
       *ptr++ = ' ';
 
@@ -221,6 +221,12 @@ void rcheevos_get_user_agent(rcheevos_locals_t *locals,
          *ptr++ = '/';
          ptr += append_no_spaces(ptr, stop, sysinfo->library_version);
       }
+   }
+
+   if (stop - ptr > 16)
+   {
+      *ptr++ = ' ';
+      ptr += rc_client_get_user_agent_clause(rcheevos_locals.client, ptr, stop - ptr);
    }
 
    *ptr = '\0';
