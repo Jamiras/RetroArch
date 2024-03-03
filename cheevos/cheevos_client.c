@@ -223,11 +223,13 @@ void rcheevos_get_user_agent(rcheevos_locals_t *locals,
       }
    }
 
-   if (stop - ptr > 16)
+#ifdef HAVE_RC_CLIENT
+   if (stop - ptr > 16 && locals->client)
    {
       *ptr++ = ' ';
-      ptr += rc_client_get_user_agent_clause(rcheevos_locals.client, ptr, stop - ptr);
+      ptr += rc_client_get_user_agent_clause(locals->client, ptr, stop - ptr);
    }
+#endif
 
    *ptr = '\0';
 }

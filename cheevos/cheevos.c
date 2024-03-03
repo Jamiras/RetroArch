@@ -3109,6 +3109,22 @@ bool rcheevos_load_aborted(void)
 
 #endif /* HAVE_RC_CLIENT */
 
+static void rcheevos_client_process_custom_host()
+{
+   const settings_t* settings = config_get_ptr();
+   const char* host = settings->arrays.cheevos_custom_host;
+   if (!host[0])
+   {
+#ifdef HAVE_SSL
+      host = "https://retroachievements.org";
+#else
+      host = "http://retroachievements.org";
+#endif
+   }
+
+   rc_client_set_host(rcheevos_locals.client, host);
+}
+
 #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
 
 static void rc_client_raintegration_hardcore_changed(rc_client_t* client)
@@ -3204,22 +3220,6 @@ static void rc_client_raintegration_get_game_name(char* buffer, uint32_t buffer_
    const char* content_path = path_get(RARCH_PATH_CONTENT);
    snprintf(buffer, buffer_size, path_basename(content_path));
    path_remove_extension(buffer);
-}
-
-static void rcheevos_client_process_custom_host()
-{
-   const settings_t* settings = config_get_ptr();
-   const char* host = settings->arrays.cheevos_custom_host;
-   if (!host[0])
-   {
-#ifdef HAVE_SSL
-      host = "https://retroachievements.org";
-#else
-      host = "http://retroachievements.org";
-#endif
-   }
-
-   rc_client_set_host(rcheevos_locals.client, host);
 }
 
 static void rcheevos_load_raintegration_callback(int result,
