@@ -269,16 +269,6 @@ void rc_client_update_active_leaderboards(rc_client_game_info_t* game);
 \*****************************************************************************/
 
 enum {
-  RC_CLIENT_LOAD_STATE_NONE,
-  RC_CLIENT_LOAD_STATE_IDENTIFYING_GAME,
-  RC_CLIENT_LOAD_STATE_AWAIT_LOGIN,
-  RC_CLIENT_LOAD_STATE_FETCHING_GAME_DATA,
-  RC_CLIENT_LOAD_STATE_STARTING_SESSION,
-  RC_CLIENT_LOAD_STATE_DONE,
-  RC_CLIENT_LOAD_STATE_UNKNOWN_GAME
-};
-
-enum {
   RC_CLIENT_USER_STATE_NONE,
   RC_CLIENT_USER_STATE_LOGIN_REQUESTED,
   RC_CLIENT_USER_STATE_LOGGED_IN
@@ -378,8 +368,10 @@ int rc_value_contains_memref(const rc_value_t* value, const rc_memref_t* memref)
 /* end runtime.c internals */
 
 /* helper functions for unit tests */
+#ifdef RC_CLIENT_SUPPORTS_HASH
 struct rc_hash_iterator;
 struct rc_hash_iterator* rc_client_get_load_state_hash_iterator(rc_client_t* client);
+#endif
 /* end helper functions for unit tests */
 
 enum {
