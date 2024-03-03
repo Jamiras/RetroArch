@@ -3346,6 +3346,9 @@ bool rcheevos_load(const void *data)
 
 #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
       {
+         char app_path[MAX_PATH];
+         wchar_t app_path_w[MAX_PATH];
+
          struct retro_game_info* info_copy = (struct retro_game_info*)
             calloc(1, sizeof(*info));
          info_copy->path = (info->path) ? strdup(info->path) : NULL;
@@ -3362,9 +3365,17 @@ bool rcheevos_load(const void *data)
          rc_client_set_host(rcheevos_locals.client, "http://retroachievements.org");
 #endif
 
-         // TODO: use local path
+         /* get the application directory - look for the DLL there */
+         fill_pathname_application_dir(app_path, sizeof(app_path));
+         if (MultiByteToWideChar(CP_UTF8, 0, app_path, strlen(app_path) + 1, app_path_w, ARRAY_SIZE(app_path_w)) == 0)
+         {
+            /* conversion failed, just use the current directory. */
+            app_path_w[0] = '.';
+            app_path_w[1] = '\0';
+         }
+
          rc_client_begin_load_raintegration(rcheevos_locals.client,
-               L"E:\\Source\\RetroAchievements\\RAIntegration\\bin\\x64\\Debug",
+               app_path_w,
                (HWND)video_driver_window_get(), "RetroArch", PACKAGE_VERSION,
                rcheevos_load_raintegration_callback, info_copy);
          return true;
