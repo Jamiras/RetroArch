@@ -126,10 +126,6 @@ MSG_HASH(
    "Mở Desktop Menu cổ điển."
    )
 MSG_HASH(
-   MENU_ENUM_LABEL_VALUE_MENU_DISABLE_KIOSK_MODE,
-   "Vô hiệu hóa chế độ Kiosk (Yêu cầu khởi động lại)"
-   )
-MSG_HASH(
    MENU_ENUM_SUBLABEL_MENU_DISABLE_KIOSK_MODE,
    "Hiện tất cả cấu hình cài đặt liên quan."
    )
@@ -1045,10 +1041,6 @@ MSG_HASH(
    "Quản lý tập tin"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_MENU_FILE_BROWSER_SETTINGS,
-   "Thay đổi cài đặt quản lý tệp tin."
-   )
-MSG_HASH(
    MENU_ENUM_SUBLABEL_FRAME_THROTTLE_SETTINGS,
    "Thay đổi cài đặt tua lại, chuyển tiếp và chuyển động chậm."
    )
@@ -1638,6 +1630,12 @@ MSG_HASH(
 /* Settings > On-Screen Display > On-Screen Overlay > Keyboard Overlay */
 
 
+/* Settings > On-Screen Display > On-Screen Overlay > Overlay Lightgun */
+
+
+/* Settings > On-Screen Display > On-Screen Overlay > Overlay Mouse */
+
+
 /* Settings > On-Screen Display > Video Layout */
 
 
@@ -1695,6 +1693,8 @@ MSG_HASH(
    )
 
 /* Settings > User Interface > Menu Item Visibility > Quick Menu */
+
+
 
 
 /* Settings > User Interface > Views > Settings */

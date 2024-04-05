@@ -4,6 +4,28 @@ MSG_HASH(
    "switch_cpu_profile"
    )
 #endif
+
+MSG_HASH(
+   MENU_ENUM_LABEL_ADD_TO_PLAYLIST,
+   "playlist_add"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_DEFERRED_ADD_TO_PLAYLIST_LIST,
+   "deferred_add_to_playlist_list"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_ADD_ENTRY_TO_PLAYLIST,
+   "add_entry_to_playlist"
+   )
+MSG_HASH(
+   MSG_ADDED_TO_PLAYLIST,
+   "Added to playlist"
+   )
+MSG_HASH(
+   MSG_ADD_TO_PLAYLIST_FAILED,
+   "Failed to add to playlist: playlist full"
+   )
+
 MSG_HASH(
    MENU_ENUM_LABEL_ACCOUNTS_CHEEVOS_USERNAME,
    "accounts_cheevos_username"
@@ -400,6 +422,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_AUTO_REMAPS_ENABLE,
    "auto_remaps_enable"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INITIAL_DISK_CHANGE_ENABLE,
+   "initial_disk_change_enable"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_GLOBAL_CORE_OPTIONS,
@@ -901,10 +927,6 @@ MSG_HASH(
    "system_information_cpu_cores"
    )
 MSG_HASH(
-   MENU_ENUM_LABEL_CURSOR_DIRECTORY,
-   "cursor_directory"
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_CURSOR_MANAGER,
    "cursor_manager"
    )
@@ -1345,6 +1367,14 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_DEFERRED_OSK_OVERLAY_SETTINGS_LIST,
    "deferred_osk_overlay_settings_list"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_DEFERRED_OVERLAY_LIGHTGUN_SETTINGS_LIST,
+   "deferred_overlay_lightgun_settings_list"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_DEFERRED_OVERLAY_MOUSE_SETTINGS_LIST,
+   "deferred_overlay_mouse_settings_list"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_DEFERRED_ONSCREEN_VIDEO_LAYOUT_SETTINGS_LIST,
@@ -1972,6 +2002,22 @@ MSG_HASH(
    "input_player%u_mouse_index"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_JOYPAD_INDEX,
+   "input_player%u_joypad_index"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_BIND_ALL_INDEX,
+   "input_player%u_bind_all"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_SAVE_AUTOCONFIG_INDEX,
+   "input_player%u_bind_all_save_autoconfig"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_BIND_DEFAULTS_INDEX,
+   "input_player%u_bind_all_bind_defaults"
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_INPUT_REMAP_PORT,
    "input_remap_port_p%u"
    )
@@ -2034,6 +2080,62 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_INPUT_OSK_OVERLAY_AUTO_SCALE,
    "input_osk_overlay_auto_scale"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_POINTER_ENABLE,
+   "input_overlay_pointer_enable"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_LIGHTGUN_PORT,
+   "input_overlay_lightgun_port"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_LIGHTGUN_TRIGGER_ON_TOUCH,
+   "input_overlay_lightgun_trigger_on_touch"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_LIGHTGUN_TRIGGER_DELAY,
+   "input_overlay_lightgun_trigger_delay"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_LIGHTGUN_ALLOW_OFFSCREEN,
+   "input_overlay_lightgun_allow_offscreen"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_LIGHTGUN_TWO_TOUCH_INPUT,
+   "input_overlay_lightgun_two_touch_input"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_LIGHTGUN_THREE_TOUCH_INPUT,
+   "input_overlay_lightgun_three_touch_input"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_LIGHTGUN_FOUR_TOUCH_INPUT,
+   "input_overlay_lightgun_four_touch_input"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_MOUSE_SPEED,
+   "input_overlay_mouse_speed"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_MOUSE_HOLD_TO_DRAG,
+   "input_overlay_mouse_hold_to_drag"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_MOUSE_HOLD_MSEC,
+   "input_overlay_mouse_hold_msec"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_MOUSE_DTAP_TO_DRAG,
+   "input_overlay_mouse_dtap_to_drag"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_MOUSE_DTAP_MSEC,
+   "input_overlay_mouse_dtap_msec"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_INPUT_OVERLAY_MOUSE_SWIPE_THRESHOLD,
+   "input_overlay_mouse_swipe_threshold"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_INPUT_OVERLAY_DPAD_DIAGONAL_SENSITIVITY,
@@ -2638,6 +2740,14 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_ONSCREEN_OVERLAY_SETTINGS,
    "onscreen_overlay_settings"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_OVERLAY_LIGHTGUN_SETTINGS,
+   "overlay_lightgun_settings"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_OVERLAY_MOUSE_SETTINGS,
+   "overlay_mouse_settings"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_OSK_OVERLAY_SETTINGS,
@@ -4038,6 +4148,14 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_BFI_DARK_FRAMES,
    "video_bfi_dark_frames"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VIDEO_SHADER_SUBFRAMES,
+   "video_shader_subframes"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VIDEO_SCAN_SUBFRAMES,
+   "video_scan_subframes"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VIDEO_CROP_OVERSCAN,
@@ -6040,6 +6158,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_NOTIFICATION_SHOW_SET_INITIAL_DISK,
    "notification_show_set_initial_disk"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_NOTIFICATION_SHOW_DISK_CONTROL,
+   "notification_show_disk_control"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_NOTIFICATION_SHOW_SAVE_STATE,
