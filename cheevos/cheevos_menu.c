@@ -592,7 +592,6 @@ void rcheevos_rebuild_integration_menu()
    {
       HWND hWnd = (HWND)video_driver_window_get();
       rc_client_raintegration_rebuild_submenu(rcheevos_locals.client, GetMenu(hWnd));
-      //DrawMenuBar(hWnd);
    }
 }
 

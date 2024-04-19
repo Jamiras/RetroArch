@@ -196,8 +196,6 @@ ACHIEVEMENTS
 #endif
 #define RC_CLIENT_SUPPORTS_HASH 1
 
-#define RC_CLIENT_SUPPORTS_HASH
-
 #if defined(_WIN32) && !defined(__WINRT__)
 #define RC_CLIENT_SUPPORTS_RAINTEGRATION
 #endif

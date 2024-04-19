@@ -15006,6 +15006,22 @@ MSG_HASH(
    "Achievement Unlocked"
    )
 MSG_HASH(
+   MSG_LOCAL_ACHIEVEMENT_UNLOCKED,
+   "Local Achievement Unlocked"
+   )
+MSG_HASH(
+   MSG_UNOFFICIAL_ACHIEVEMENT_UNLOCKED,
+   "Unofficial Achievement Unlocked"
+   )
+MSG_HASH(
+   MSG_MODIFIED_ACHIEVEMENT_UNLOCKED,
+   "Modified Achievement Unlocked Locally"
+   )
+MSG_HASH(
+   MSG_INSECURE_ACHIEVEMENT_UNLOCKED,
+   "Achievement Unlocked Locally"
+   )
+MSG_HASH(
    MSG_LEADERBOARD_STARTED,
    "Leaderboard attempt started"
    )

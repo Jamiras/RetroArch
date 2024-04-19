@@ -36,6 +36,7 @@ uintptr_t rcheevos_menu_get_badge_texture(unsigned menu_offset);
 void rcheevos_menu_reset_badges(void);
 
 #ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+#define RC_COMMAND_REBUILD_MENU 1799
 void rcheevos_update_hwnd(HWND hWnd);
 void rcheevos_rebuild_integration_menu();
 void rcheevos_append_integration_menu(HMENU hMenu);

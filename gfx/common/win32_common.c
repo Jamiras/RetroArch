@@ -860,6 +860,10 @@ static LRESULT win32_menu_loop(HWND owner, WPARAM wparam)
          else if (rcheevos_activate_integration_menu_item(mode))
          {
          }
+         else if (mode == RC_COMMAND_REBUILD_MENU)
+         {
+            rcheevos_rebuild_integration_menu();
+         }
  #endif
 #endif
          break;

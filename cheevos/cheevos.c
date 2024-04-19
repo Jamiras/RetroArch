@@ -455,10 +455,33 @@ static void rcheevos_award_achievement(const rc_client_achievement_t* cheevo)
    /* Show the on screen message. */
    if (settings->bools.cheevos_visibility_unlock)
    {
+      int msg = MSG_ACHIEVEMENT_UNLOCKED;
+      if (cheevo->category == RC_CLIENT_ACHIEVEMENT_CATEGORY_UNOFFICIAL)
+         msg = MSG_UNOFFICIAL_ACHIEVEMENT_UNLOCKED;
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+      else
+      {
+         switch (rc_client_raintegration_get_achievement_state(rcheevos_locals.client, cheevo->id))
+         {
+         case RC_CLIENT_RAINTEGRATION_ACHIEVEMENT_STATE_LOCAL:
+            msg = MSG_LOCAL_ACHIEVEMENT_UNLOCKED;
+            break;
+         case RC_CLIENT_RAINTEGRATION_ACHIEVEMENT_STATE_MODIFIED:
+            msg = MSG_MODIFIED_ACHIEVEMENT_UNLOCKED;
+            break;
+         case RC_CLIENT_RAINTEGRATION_ACHIEVEMENT_STATE_INSECURE:
+            msg = MSG_INSECURE_ACHIEVEMENT_UNLOCKED;
+            break;
+         default:
+            break;
+         }
+      }
+#endif
+
 #if defined(HAVE_GFX_WIDGETS)
       if (gfx_widgets_ready())
       {
-         gfx_widgets_push_achievement(msg_hash_to_str(MSG_ACHIEVEMENT_UNLOCKED),
+         gfx_widgets_push_achievement(msg_hash_to_str(msg),
             cheevo->title, cheevo->badge_name);
       }
       else
@@ -466,7 +489,7 @@ static void rcheevos_award_achievement(const rc_client_achievement_t* cheevo)
       {
          char buffer[256];
          snprintf(buffer, sizeof(buffer), "%s: %s",
-            msg_hash_to_str(MSG_ACHIEVEMENT_UNLOCKED), cheevo->title);
+            msg_hash_to_str(msg), cheevo->title);
          runloop_msg_queue_push(buffer, 0, 2 * 60, false, NULL,
             MESSAGE_QUEUE_ICON_DEFAULT, MESSAGE_QUEUE_CATEGORY_INFO);
          runloop_msg_queue_push(cheevo->description, 0, 3 * 60, false, NULL,
@@ -3289,8 +3312,9 @@ static void rcheevos_load_raintegration_callback(int result,
        * ensure the handle is correct */
       rc_client_raintegration_update_main_window_handle(rcheevos_locals.client, win32_get_window());
 
-      /* initialization has finished, the menu can be populated now */
-      rcheevos_rebuild_integration_menu();
+      /* initialization has finished, the menu can be populated now -
+       * use a pseudo-command to ensure this happens on the UI thread */
+      PostMessage(win32_get_window(), WM_COMMAND, RC_COMMAND_REBUILD_MENU, 0);
    }
 }
 
