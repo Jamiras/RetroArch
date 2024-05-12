@@ -54,6 +54,7 @@ static uint32_t mfi_buttons[MAX_USERS];
 static int16_t  mfi_axes[MAX_USERS][MAX_MFI_AXES];
 static uint32_t mfi_controllers[MAX_MFI_CONTROLLERS];
 static MFIRumbleController *mfi_rumblers[MAX_MFI_CONTROLLERS];
+#define MFI_WEAK_RUMBLE 0.3f
 static NSMutableArray *mfiControllers;
 static bool mfi_inited;
 
@@ -68,6 +69,11 @@ static bool apple_gamecontroller_available(void)
 #endif
 
     return true;
+}
+
+static bool mfi_controller_is_siri_remote(GCController *controller)
+{
+   return controller.microGamepad && !controller.extendedGamepad && [@"Remote" isEqualToString:controller.vendorName];
 }
 
 static void apple_gamecontroller_joypad_poll_internal(GCController *controller, uint32_t slot)
@@ -90,7 +96,36 @@ static void apple_gamecontroller_joypad_poll_internal(GCController *controller, 
     }
     memset(mfi_axes[slot], 0, sizeof(mfi_axes[0]));
 
-    if (controller.extendedGamepad)
+    if (@available(macOS 11, iOS 14, tvOS 14, *))
+    {
+        GCPhysicalInputProfile *profile = controller.physicalInputProfile;
+
+        *buttons |= [[profile.dpads[GCInputDirectionPad] up] isPressed]       ? (1 << RETRO_DEVICE_ID_JOYPAD_UP)     : 0;
+        *buttons |= [[profile.dpads[GCInputDirectionPad] down] isPressed]     ? (1 << RETRO_DEVICE_ID_JOYPAD_DOWN)   : 0;
+        *buttons |= [[profile.dpads[GCInputDirectionPad] left] isPressed]     ? (1 << RETRO_DEVICE_ID_JOYPAD_LEFT)   : 0;
+        *buttons |= [[profile.dpads[GCInputDirectionPad] right] isPressed]    ? (1 << RETRO_DEVICE_ID_JOYPAD_RIGHT)  : 0;
+        *buttons |= [profile.buttons[GCInputButtonA] isPressed]               ? (1 << RETRO_DEVICE_ID_JOYPAD_B)      : 0;
+        *buttons |= [profile.buttons[GCInputButtonB] isPressed]               ? (1 << RETRO_DEVICE_ID_JOYPAD_A)      : 0;
+        *buttons |= [profile.buttons[GCInputButtonX] isPressed]               ? (1 << RETRO_DEVICE_ID_JOYPAD_Y)      : 0;
+        *buttons |= [profile.buttons[GCInputButtonY] isPressed]               ? (1 << RETRO_DEVICE_ID_JOYPAD_X)      : 0;
+        *buttons |= [profile.buttons[GCInputLeftShoulder] isPressed]          ? (1 << RETRO_DEVICE_ID_JOYPAD_L)      : 0;
+        *buttons |= [profile.buttons[GCInputRightShoulder] isPressed]         ? (1 << RETRO_DEVICE_ID_JOYPAD_R)      : 0;
+        *buttons |= [profile.buttons[GCInputLeftTrigger] isPressed]           ? (1 << RETRO_DEVICE_ID_JOYPAD_L2)     : 0;
+        *buttons |= [profile.buttons[GCInputRightTrigger] isPressed]          ? (1 << RETRO_DEVICE_ID_JOYPAD_R2)     : 0;
+        *buttons |= [profile.buttons[GCInputLeftThumbstickButton] isPressed]  ? (1 << RETRO_DEVICE_ID_JOYPAD_L3)     : 0;
+        *buttons |= [profile.buttons[GCInputRightThumbstickButton] isPressed] ? (1 << RETRO_DEVICE_ID_JOYPAD_R3)     : 0;
+        *buttons |= [profile.buttons[GCInputButtonOptions] isPressed]         ? (1 << RETRO_DEVICE_ID_JOYPAD_SELECT) : 0;
+        *buttons |= [profile.buttons[GCInputButtonMenu] isPressed]            ? (1 << RETRO_DEVICE_ID_JOYPAD_START)  : 0;
+        *buttons |= [profile.buttons[GCInputButtonHome] isPressed]            ? (1 << RARCH_FIRST_CUSTOM_BIND)       : 0;
+
+        mfi_axes[slot][0] = [[profile.dpads[GCInputLeftThumbstick] xAxis] value]  * 32767.0f;
+        mfi_axes[slot][1] = [[profile.dpads[GCInputLeftThumbstick] yAxis] value]  * 32767.0f;
+        mfi_axes[slot][2] = [[profile.dpads[GCInputRightThumbstick] xAxis] value] * 32767.0f;
+        mfi_axes[slot][3] = [[profile.dpads[GCInputRightThumbstick] yAxis] value] * 32767.0f;
+        mfi_axes[slot][4] = [profile.buttons[GCInputLeftTrigger] value]           * 32767.0f;
+        mfi_axes[slot][5] = [profile.buttons[GCInputRightTrigger] value]          * 32767.0f;
+    }
+    else if (controller.extendedGamepad)
     {
         GCExtendedGamepad *gp = (GCExtendedGamepad *)controller.extendedGamepad;
 
@@ -184,7 +219,9 @@ static void apple_gamecontroller_joypad_poll(void)
     for (GCController *controller in [GCController controllers])
     {
        /* If we have not assigned a slot to this controller yet, ignore it. */
-       if (controller && (controller.playerIndex >= 0) && (controller.playerIndex < MAX_USERS))
+       if (  controller &&
+             (controller.playerIndex >= 0) && (controller.playerIndex < MAX_USERS) &&
+             !mfi_controller_is_siri_remote(controller))
           apple_gamecontroller_joypad_poll_internal(controller, (uint32_t)controller.playerIndex);
     }
 }
@@ -280,7 +317,7 @@ static void mfi_joypad_autodetect_add(unsigned autoconf_pad, const char *display
 #define MFI_RUMBLE_AVAIL API_AVAILABLE(macos(11.0), ios(14.0), tvos(14.0))
 @interface MFIRumbleController : NSObject
 @property (nonatomic, strong, readonly) GCController *controller;
-@property (nonatomic, strong) CHHapticEngine *engine MFI_RUMBLE_AVAIL;
+@property (nonatomic, strong) NSMutableSet<CHHapticEngine *> *engines MFI_RUMBLE_AVAIL;
 @property (nonatomic, strong, readonly) id<CHHapticPatternPlayer> strongPlayer MFI_RUMBLE_AVAIL;
 @property (nonatomic, strong, readonly) id<CHHapticPatternPlayer> weakPlayer MFI_RUMBLE_AVAIL;
 @end
@@ -297,34 +334,28 @@ static void mfi_joypad_autodetect_add(unsigned autoconf_pad, const char *display
             return self;
 
         _controller = controller;
-
-        [self setupEngine];
-        if (!self.engine)
-            return self;
-
-        _strongPlayer = [self createPlayerWithSharpness:1.0f];
-        _weakPlayer   = [self createPlayerWithSharpness:0.5f];
+        _engines = [[NSMutableSet alloc] init];
     }
     return self;
 }
 
-- (void)setupEngine MFI_RUMBLE_AVAIL
+- (id<CHHapticPatternPlayer>)createPlayerWithLocality:(GCHapticsLocality)locality andIntensity:(float)intensity MFI_RUMBLE_AVAIL
 {
     NSError *error;
-    if (self.engine)
-        return;
     if (!self.controller)
-        return;
+        return nil;
 
-    CHHapticEngine *engine = [self.controller.haptics createEngineWithLocality:GCHapticsLocalityDefault];
+    if (![self.controller.haptics.supportedLocalities containsObject:locality])
+        locality = GCHapticsLocalityDefault;
+    CHHapticEngine *engine = [self.controller.haptics createEngineWithLocality:locality];
     [engine startAndReturnError:&error];
     if (error)
-        return;
+        return nil;
 
-    self.engine = engine;
+    [self.engines addObject:engine];
 
     __weak MFIRumbleController *weakSelf = self;
-    self.engine.stoppedHandler = ^(CHHapticEngineStoppedReason stoppedReason)
+    engine.stoppedHandler = ^(CHHapticEngineStoppedReason stoppedReason)
     {
         MFIRumbleController *strongSelf = weakSelf;
         if (!strongSelf)
@@ -332,38 +363,25 @@ static void mfi_joypad_autodetect_add(unsigned autoconf_pad, const char *display
 
         [strongSelf shutdown];
     };
-    self.engine.resetHandler = ^{
+    engine.resetHandler = ^{
         MFIRumbleController *strongSelf = weakSelf;
         if (!strongSelf)
             return;
 
-        [strongSelf.engine startAndReturnError:nil];
+        for (CHHapticEngine *eng in strongSelf.engines)
+            [eng startAndReturnError:nil];
     };
-}
 
-- (id<CHHapticPatternPlayer>)createPlayerWithSharpness:(float)sharpness MFI_RUMBLE_AVAIL
-{
-    if (!self.controller)
-        return nil;
-
-    [self setupEngine];
-    if (!self.engine)
-        return nil;
-
-    CHHapticEventParameter *sharp, *intense;
+    CHHapticEventParameter *intense;
     CHHapticEvent *event;
     CHHapticPattern *pattern;
-    NSError *error;
 
-    sharp   = [[CHHapticEventParameter alloc]
-             initWithParameterID:CHHapticEventParameterIDHapticSharpness
-             value:sharpness];
     intense = [[CHHapticEventParameter alloc]
                initWithParameterID:CHHapticEventParameterIDHapticIntensity
-               value:1.0f];
+               value:intensity];
     event   = [[CHHapticEvent alloc]
              initWithEventType:CHHapticEventTypeHapticContinuous
-             parameters:[NSArray arrayWithObjects:sharp, intense, nil]
+             parameters:[NSArray arrayWithObjects:intense, nil]
              relativeTime:0
              duration:GCHapticDurationInfinite];
     pattern = [[CHHapticPattern alloc]
@@ -374,7 +392,7 @@ static void mfi_joypad_autodetect_add(unsigned autoconf_pad, const char *display
     if (error)
         return nil;
 
-    id<CHHapticPatternPlayer> player = [self.engine createPlayerWithPattern:pattern error:&error];
+    id<CHHapticPatternPlayer> player = [engine createPlayerWithPattern:pattern error:&error];
     if (error)
         return nil;
     [player stopAtTime:0 error:&error];
@@ -383,13 +401,13 @@ static void mfi_joypad_autodetect_add(unsigned autoconf_pad, const char *display
 
 - (id<CHHapticPatternPlayer>)strongPlayer
 {
-    _strongPlayer = _strongPlayer ?: [self createPlayerWithSharpness:1.0];
+    _strongPlayer = _strongPlayer ?: [self createPlayerWithLocality:GCHapticsLocalityAll andIntensity:1.0];
     return _strongPlayer;
 }
 
 - (id<CHHapticPatternPlayer>)weakPlayer
 {
-    _weakPlayer = _weakPlayer ?: [self createPlayerWithSharpness:0.5f];
+    _weakPlayer = _weakPlayer ?: [self createPlayerWithLocality:GCHapticsLocalityTriggers andIntensity:MFI_WEAK_RUMBLE];
     return _weakPlayer;
 }
 
@@ -399,7 +417,7 @@ static void mfi_joypad_autodetect_add(unsigned autoconf_pad, const char *display
     {
         _weakPlayer   = nil;
         _strongPlayer = nil;
-        self.engine   = nil;
+        [self.engines removeAllObjects];
     }
 }
 
@@ -472,7 +490,7 @@ static void apple_gamecontroller_joypad_connect(GCController *controller)
               gc.playerIndex = newPlayerIndex++;
         }
 
-        if (controller.microGamepad && !controller.extendedGamepad)
+        if (mfi_controller_is_siri_remote(controller))
             return;
 
         apple_gamecontroller_joypad_register(controller);
@@ -528,7 +546,7 @@ static void apple_gamecontroller_device_haptics_setup() IPHONE_RUMBLE_AVAIL
     };
 }
 
-static id<CHHapticPatternPlayer> apple_gamecontroller_device_haptics_create_player(float sharpness) IPHONE_RUMBLE_AVAIL
+static id<CHHapticPatternPlayer> apple_gamecontroller_device_haptics_create_player(float intensity) IPHONE_RUMBLE_AVAIL
 {
     if (!CHHapticEngine.capabilitiesForHardware.supportsHaptics)
         return nil;
@@ -537,20 +555,17 @@ static id<CHHapticPatternPlayer> apple_gamecontroller_device_haptics_create_play
     if (!deviceHapticEngine)
         return nil;
 
-    CHHapticEventParameter *sharp, *intense;
+    CHHapticEventParameter *intense;
     CHHapticEvent *event;
     CHHapticPattern *pattern;
     NSError *error;
 
-    sharp   = [[CHHapticEventParameter alloc]
-               initWithParameterID:CHHapticEventParameterIDHapticSharpness
-               value:sharpness];
     intense = [[CHHapticEventParameter alloc]
                initWithParameterID:CHHapticEventParameterIDHapticIntensity
-               value:1.0f];
+               value:intensity];
     event   = [[CHHapticEvent alloc]
                initWithEventType:CHHapticEventTypeHapticContinuous
-               parameters:[NSArray arrayWithObjects:sharp, intense, nil]
+               parameters:[NSArray arrayWithObjects:intense, nil]
                relativeTime:0
                duration:GCHapticDurationInfinite];
     pattern = [[CHHapticPattern alloc]
@@ -577,9 +592,9 @@ static id<CHHapticPatternPlayer> apple_gamecontroller_device_haptics_strong_play
 
 static id<CHHapticPatternPlayer> apple_gamecontroller_device_haptics_weak_player() IPHONE_RUMBLE_AVAIL
 {
-    if (!deviceStrongPlayer)
-        deviceStrongPlayer = apple_gamecontroller_device_haptics_create_player(0.5f);
-    return deviceStrongPlayer;
+    if (!deviceWeakPlayer)
+        deviceWeakPlayer = apple_gamecontroller_device_haptics_create_player(0.5f);
+    return deviceWeakPlayer;
 }
 #endif
 
@@ -741,6 +756,7 @@ static bool apple_gamecontroller_joypad_set_rumble(unsigned pad,
                 else
                 {
                    float str = (float)strength / 65535.0f;
+                   if (type == RETRO_RUMBLE_WEAK) str *= MFI_WEAK_RUMBLE;
                    CHHapticDynamicParameter *param = [[CHHapticDynamicParameter alloc]
                       initWithParameterID:CHHapticDynamicParameterIDHapticIntensityControl
                                     value:str
