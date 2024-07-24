@@ -3289,6 +3289,10 @@ static void rcheevos_raintegration_event_handler(const rc_client_raintegration_e
       case RC_CLIENT_RAINTEGRATION_EVENT_HARDCORE_CHANGED:
          rc_client_raintegration_hardcore_changed(client);
          break;
+      case 4: // RC_CLIENT_RAINTEGRATION_EVENT_MENU_CHANGED
+         /* use a pseudo-command to ensure this happens on the UI thread */
+         PostMessage(win32_get_window(), WM_COMMAND, RC_COMMAND_REBUILD_MENU, 0);
+         break;
       default:
 #ifndef NDEBUG
          CHEEVOS_LOG(RCHEEVOS_TAG "Unsupported raintegration event %u\n", event->type);
@@ -3350,10 +3354,8 @@ static void rcheevos_load_raintegration_callback(int result,
       rc_client_raintegration_set_write_memory_function(client, rcheevos_raintegration_write_memory);
       rc_client_raintegration_set_get_game_name_function(client, rc_client_raintegration_get_game_name);
    }
-   else
-   {
-      rcheevos_client_process_custom_host();
-   }
+
+   rcheevos_client_process_custom_host();
 
    rcheevos_client_download_placeholder_badge();
 
