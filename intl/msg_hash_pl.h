@@ -1213,9 +1213,25 @@ MSG_HASH(
    "Destrukcyjna synchronizacja w chmurze"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_CLOUD_SYNC_SYNC_SAVES,
+   "Synchronizacja: Zapisy/Stany"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_CLOUD_SYNC_SYNC_CONFIGS,
+   "Synchronizacja: Pliki konfiguracyjne"
+   )      
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_CLOUD_SYNC_SYNC_SAVES,
+   "Po włączeniu zapisy/stany zostaną zsynchronizowane z chmurą."
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_CLOUD_SYNC_SYNC_CONFIGS,
+   "Po włączeniu pliki konfiguracyjne zostaną zsynchronizowane z chmurą."
+   )
+MSG_HASH(
    MENU_ENUM_SUBLABEL_CLOUD_SYNC_DESTRUCTIVE,
    "Gdy wyłączone, pliki są przenoszone do folderu kopii zapasowej przed nadpisaniem lub usunięciem."
-   )
+   )      
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_CLOUD_SYNC_DRIVER,
    "Back-end synchronizacji w chmurze"
@@ -2492,17 +2508,43 @@ MSG_HASH(
    "Niestandardowy współczynnik proporcji (pozycja X)"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_CUSTOM_X,
-   "Własne przesunięcie widoku używane do zdefiniowania pozycji osi X widoku.\nSą one ignorowane, jeśli 'Skala całkowita' jest włączona."
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_VIEWPORT_CUSTOM_Y,
    "Niestandardowy współczynnik proporcji (pozycja Y)"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_CUSTOM_Y,
-   "Własne przesunięcie widoku używane do zdefiniowania położenia osi Y widoku.\nSą one ignorowane, jeśli włączona jest „skala całkowita”."
+   MENU_ENUM_LABEL_VIDEO_VIEWPORT_BIAS_X,
+   "Podgląd zakotwiczenia X"
    )
+MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_VIDEO_VIEWPORT_BIAS_X,
+   "Podgląd zakotwiczenia X"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_X, 
+   "Własny widok używany do wyrównywania widoku poziomo (jeśli jest większy niż wysokość zawartości). 0.0 oznacza lewy i 1.0 oznacza prawo."
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_Y, 
+   "Własny widok używany do wyrównywania widoku poziomo (jeśli jest większy niż wysokość zawartości). 0.0 oznacza lewy i 1.0 oznacza prawo."
+   )
+#if defined(RARCH_MOBILE)
+MSG_HASH(
+   MENU_ENUM_LABEL_VIDEO_VIEWPORT_BIAS_PORTRAIT_X,
+   "Podgląd kotwicy X (orientacja pionowa)"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_VIDEO_VIEWPORT_BIAS_PORTRAIT_X,
+   "Podgląd kotwicy X (orientacja pionowa)"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_PORTRAIT_X, 
+   "Własny widok używany do wyrównywania widoku poziomo (jeśli jest większy niż wysokość zawartości). 0.0 oznacza lewo, a 1.0 oznacza prawo. (orientacja pionowa)"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_PORTRAIT_Y, 
+   "Własny widok używany do przesuwania widoku pionowo (jeśli jest wyższy niż wysokość zawartości). 0.0 oznacza górny i 1.0 oznacza dolny (orientacja pionowa)"
+   )
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_VIEWPORT_CUSTOM_WIDTH,
    "Niestandardowy współczynnik proporcji (szerokość)"
@@ -12834,6 +12876,10 @@ MSG_HASH(
 MSG_HASH(
    MSG_ACHIEVEMENT_UNLOCKED,
    "Osiągnięcie odblokowane"
+   )
+MSG_HASH(
+   MSG_RARE_ACHIEVEMENT_UNLOCKED,
+   "Rzadkie Osiągnięcia odblokowane"
    )
 MSG_HASH(
    MSG_LEADERBOARD_SUBMISSION,

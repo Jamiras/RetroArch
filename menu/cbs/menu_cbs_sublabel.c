@@ -70,7 +70,7 @@
 static int menu_action_sublabel_file_browser_core(file_list_t *list, unsigned type, unsigned i, const char *label, const char *path, char *s, size_t len)
 {
    core_info_t *core_info = NULL;
-   size_t _len = 
+   size_t _len =
       strlcpy(s,
             msg_hash_to_str(MENU_ENUM_LABEL_VALUE_CORE_INFO_LICENSES), len);
    s[  _len]   = ':';
@@ -78,16 +78,18 @@ static int menu_action_sublabel_file_browser_core(file_list_t *list, unsigned ty
    s[++_len]   = '\0';
 
    /* Search for specified core */
-   if (  
+   if (
          core_info_find(path, &core_info)
       && core_info->licenses_list)
    {
-      char tmp[MENU_SUBLABEL_MAX_LENGTH];
-      tmp[0] = '\0';
+      unsigned i;
       /* Add license text */
-      string_list_join_concat(tmp, sizeof(tmp),
-            core_info->licenses_list, ", ");
-      strlcpy(s + _len, tmp, len - _len);
+      for (i = 0; i < core_info->licenses_list->size; i++)
+      {
+         _len += strlcpy(s + _len, core_info->licenses_list->elems[i].data, len - _len);
+         if ((i + 1) < core_info->licenses_list->size)
+            _len += strlcpy(s + _len, ", ", len - _len);
+      }
    }
    else /* No license found - set to N/A */
       strlcpy(s + _len, msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE), len - _len);
@@ -102,7 +104,6 @@ static int menu_action_sublabel_contentless_core(file_list_t *list,
    const char *core_path                      = path;
    core_info_t *core_info                     = NULL;
    const contentless_core_info_entry_t *entry = NULL;
-   const char *menu_ident                     = menu_driver_ident();
    bool display_runtime                       = true;
    settings_t *settings                       = config_get_ptr();
    bool playlist_show_sublabels               = settings->bools.playlist_show_sublabels;
@@ -119,6 +120,9 @@ static int menu_action_sublabel_contentless_core(file_list_t *list,
          menu_timedate_date_separator         =
                (enum playlist_sublabel_last_played_date_separator_type)
                      settings->uints.menu_timedate_date_separator;
+#if defined(HAVE_OZONE) || defined(HAVE_MATERIALUI)
+   const char *menu_ident                     = menu_driver_ident();
+#endif
 
    if (playlist_show_sublabels)
    {
@@ -255,6 +259,8 @@ DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_saving_settings_list,          MENU_
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_settings_list,      MENU_ENUM_SUBLABEL_CLOUD_SYNC_SETTINGS)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_enable,             MENU_ENUM_SUBLABEL_CLOUD_SYNC_ENABLE)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_destructive,        MENU_ENUM_SUBLABEL_CLOUD_SYNC_DESTRUCTIVE)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_sync_saves,        MENU_ENUM_SUBLABEL_CLOUD_SYNC_SYNC_SAVES)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_sync_configs,        MENU_ENUM_SUBLABEL_CLOUD_SYNC_SYNC_CONFIGS)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_driver,             MENU_ENUM_SUBLABEL_CLOUD_SYNC_DRIVER)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_url,                MENU_ENUM_SUBLABEL_CLOUD_SYNC_URL)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_cloud_sync_username,           MENU_ENUM_SUBLABEL_CLOUD_SYNC_USERNAME)
@@ -478,6 +484,8 @@ DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_device_type,                ME
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_device_index,               MENU_ENUM_SUBLABEL_INPUT_DEVICE_INDEX)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_mouse_index,                MENU_ENUM_SUBLABEL_INPUT_MOUSE_INDEX)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_adc_type,                   MENU_ENUM_SUBLABEL_INPUT_ADC_TYPE)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_device_reservation_type,    MENU_ENUM_SUBLABEL_INPUT_DEVICE_RESERVATION_TYPE)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_device_reserved_device_name, MENU_ENUM_SUBLABEL_INPUT_DEVICE_RESERVED_DEVICE_NAME)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_bind_all,                   MENU_ENUM_SUBLABEL_INPUT_BIND_ALL)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_save_autoconfig,            MENU_ENUM_SUBLABEL_INPUT_SAVE_AUTOCONFIG)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_input_bind_defaults,              MENU_ENUM_SUBLABEL_INPUT_BIND_DEFAULTS)
@@ -1247,6 +1255,12 @@ DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_custom_height,       
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_custom_width,           MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_CUSTOM_WIDTH)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_custom_x,               MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_CUSTOM_X)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_custom_y,               MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_CUSTOM_Y)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_bias_x,                 MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_X)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_bias_y,                 MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_Y)
+#if defined(RARCH_MOBILE)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_bias_portrait_x,        MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_PORTRAIT_X)
+DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_video_viewport_bias_portrait_y,        MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_BIAS_PORTRAIT_Y)
+#endif
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_netplay_use_mitm_server,               MENU_ENUM_SUBLABEL_NETPLAY_USE_MITM_SERVER)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_netplay_mitm_server,                   MENU_ENUM_SUBLABEL_NETPLAY_MITM_SERVER)
 DEFAULT_SUBLABEL_MACRO(action_bind_sublabel_netplay_custom_mitm_server,            MENU_ENUM_SUBLABEL_NETPLAY_CUSTOM_MITM_SERVER)
@@ -1404,11 +1418,11 @@ static int action_bind_sublabel_systeminfo_controller_entry(
 
    snprintf(tmp, sizeof(tmp),
          msg_hash_to_str(MENU_ENUM_LABEL_VALUE_PORT_DEVICE_INFO),
-           input_config_get_device_display_name(controller) 
-         ? input_config_get_device_display_name(controller) 
+           input_config_get_device_display_name(controller)
+         ? input_config_get_device_display_name(controller)
          : msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE),
-           input_config_get_device_display_name(controller) 
-         ? input_config_get_device_config_name(controller) 
+           input_config_get_device_display_name(controller)
+         ? input_config_get_device_config_name(controller)
          : msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE),
            input_config_get_device_vid(controller),
            input_config_get_device_pid(controller));
@@ -1442,7 +1456,7 @@ static int action_bind_sublabel_cpu_policy_entry_list(
    {
       int idx     = atoi(path);
       size_t _len = strlcpy(s, drivers[idx]->scaling_governor, len);
-      snprintf(s + _len, len - _len, " | Freq: %u MHz\n", 
+      snprintf(s + _len, len - _len, " | Freq: %u MHz\n",
             drivers[idx]->current_frequency / 1000);
       return 0;
    }
@@ -1519,9 +1533,9 @@ static int action_bind_sublabel_subsystem_load(
 
    for (j = 0; j < content_get_subsystem_rom_id(); j++)
    {
-      strlcat(buf, path_basename(content_get_subsystem_rom(j)), sizeof(buf));
+      size_t _len = strlcat(buf, path_basename(content_get_subsystem_rom(j)), sizeof(buf));
       if (j != content_get_subsystem_rom_id() - 1)
-         strlcat(buf, "\n", sizeof(buf));
+         _len += strlcpy(buf + _len, "\n", sizeof(buf) - _len);
    }
 
    if (!string_is_empty(buf))
@@ -1660,7 +1674,7 @@ static int action_bind_sublabel_input_remap_port(
 
    MENU_ENTRY_INITIALIZE(entry);
 
-   entry.flags |= MENU_ENTRY_FLAG_LABEL_ENABLED; 
+   entry.flags |= MENU_ENTRY_FLAG_LABEL_ENABLED;
 
    menu_entry_get(&entry, 0, i, NULL, false);
 
@@ -1729,7 +1743,7 @@ static int action_bind_sublabel_netplay_room(file_list_t *list,
       ": %s (%s)\n"
       "%s: %s (%s)\n"
       "%s: %s ",
-      !string_is_empty(room->retroarch_version) 
+      !string_is_empty(room->retroarch_version)
       ? room->retroarch_version
       : msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE),
       (!string_is_empty(room->frontend) &&
@@ -1962,8 +1976,8 @@ static int action_bind_sublabel_playlist_entry(
    if (   !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_LOAD_CONTENT_HISTORY))
        && !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_HISTORY_TAB))
        && !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_FAVORITES_LIST))
-       && !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_FAVORITES_TAB)) 
-       && !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_PLAYLIST_LIST)) 
+       && !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_FAVORITES_TAB))
+       && !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_DEFERRED_PLAYLIST_LIST))
        && !string_is_equal(label, msg_hash_to_str(MENU_ENUM_LABEL_HORIZONTAL_MENU)))
       return 0;
 
@@ -2064,7 +2078,7 @@ static int action_bind_sublabel_core_updater_entry(
 {
    core_updater_list_t *core_list         = core_updater_list_get_cached();
    const core_updater_list_entry_t *entry = NULL;
-   size_t _len = 
+   size_t _len =
       strlcpy(s,
             msg_hash_to_str(MENU_ENUM_LABEL_VALUE_CORE_INFO_LICENSES), len);
    s[  _len]   = ':';
@@ -2076,12 +2090,14 @@ static int action_bind_sublabel_core_updater_entry(
        && core_updater_list_get_filename(core_list, path, &entry)
        && entry->licenses_list)
    {
-      char tmp[MENU_SUBLABEL_MAX_LENGTH];
-      tmp[0] = '\0';
+      unsigned i;
       /* Add license text */
-      string_list_join_concat(tmp, sizeof(tmp),
-            entry->licenses_list, ", ");
-      strlcpy(s + _len, tmp, len - _len);
+      for (i = 0; i < entry->licenses_list->size; i++)
+      {
+         _len += strlcpy(s + _len, entry->licenses_list->elems[i].data, len - _len);
+         if ((i + 1) < entry->licenses_list->size)
+            _len += strlcpy(s + _len, ", ", len - _len);
+      }
    }
    else /* No license found - set to N/A */
       strlcpy(s + _len, msg_hash_to_str(MENU_ENUM_LABEL_VALUE_NOT_AVAILABLE), len - _len);
@@ -2564,6 +2580,20 @@ int menu_cbs_init_bind_sublabel(menu_file_list_cbs_t *cbs,
          case MENU_ENUM_LABEL_VIDEO_ASPECT_RATIO:
             BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_video_aspect_ratio);
             break;
+         case MENU_ENUM_LABEL_VIDEO_VIEWPORT_BIAS_X:
+            BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_video_viewport_bias_x);
+            break;
+         case MENU_ENUM_LABEL_VIDEO_VIEWPORT_BIAS_Y:
+            BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_video_viewport_bias_y);
+            break;
+#if defined(RARCH_MOBILE)
+         case MENU_ENUM_LABEL_VIDEO_VIEWPORT_BIAS_PORTRAIT_X:
+            BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_video_viewport_bias_portrait_x);
+            break;
+         case MENU_ENUM_LABEL_VIDEO_VIEWPORT_BIAS_PORTRAIT_Y:
+            BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_video_viewport_bias_portrait_y);
+            break;
+#endif
          case MENU_ENUM_LABEL_VIDEO_ASPECT_RATIO_INDEX:
             BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_video_aspect_ratio_index);
             break;
@@ -5023,6 +5053,12 @@ int menu_cbs_init_bind_sublabel(menu_file_list_cbs_t *cbs,
          case MENU_ENUM_LABEL_CLOUD_SYNC_DESTRUCTIVE:
             BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_cloud_sync_destructive);
             break;
+         case MENU_ENUM_LABEL_CLOUD_SYNC_SYNC_SAVES:
+            BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_cloud_sync_sync_saves);
+            break;
+         case MENU_ENUM_LABEL_CLOUD_SYNC_SYNC_CONFIGS:
+            BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_cloud_sync_sync_configs);
+            break;
          case MENU_ENUM_LABEL_CLOUD_SYNC_DRIVER:
             BIND_ACTION_SUBLABEL(cbs, action_bind_sublabel_cloud_sync_driver);
             break;
@@ -5620,7 +5656,7 @@ int menu_cbs_init_bind_sublabel(menu_file_list_cbs_t *cbs,
    }
    else
    {
-      /* Per-port entries require string match against label. 
+      /* Per-port entries require string match against label.
        * Some cases may be detected above by "type", but not all. */
       typedef struct info_single_list
       {
@@ -5633,26 +5669,40 @@ int menu_cbs_init_bind_sublabel(menu_file_list_cbs_t *cbs,
 
       /* Entries with %u player index placeholder. */
       info_single_list_t info_list[] = {
-/*         {
+#if 0
+         {
             MENU_ENUM_LABEL_INPUT_LIBRETRO_DEVICE,
             NULL
-         },*/
+         },
+#endif
          {
             MENU_ENUM_LABEL_INPUT_PLAYER_ANALOG_DPAD_MODE,
             action_bind_sublabel_input_adc_type
          },
-/*         {
+#if 0
+         {
             MENU_ENUM_LABEL_INPUT_DEVICE_INDEX,
             NULL
-         },*/
+         },
+#endif
+         {
+            MENU_ENUM_LABEL_INPUT_DEVICE_RESERVATION_TYPE,
+            action_bind_sublabel_input_device_reservation_type
+         },
+         {
+            MENU_ENUM_LABEL_INPUT_DEVICE_RESERVED_DEVICE_NAME,
+            action_bind_sublabel_input_device_reserved_device_name
+         },
          {
             MENU_ENUM_LABEL_INPUT_MOUSE_INDEX,
             action_bind_sublabel_input_mouse_index
          },
-/*         {
+#if 0
+         {
             MENU_ENUM_LABEL_INPUT_REMAP_PORT,
             NULL
-         },*/
+         },
+#endif
          {
             MENU_ENUM_LABEL_INPUT_JOYPAD_INDEX,
             action_bind_sublabel_input_device_index
@@ -5668,22 +5718,20 @@ int menu_cbs_init_bind_sublabel(menu_file_list_cbs_t *cbs,
          {
             MENU_ENUM_LABEL_INPUT_BIND_DEFAULTS_INDEX,
             action_bind_sublabel_input_bind_defaults
-         },         
+         },
       };
 
       const char* idx_placeholder = "%u";
       for (i = 0; i < ARRAY_SIZE(info_list); i++)
       {
-         int idxpos = -1;
-         idxpos = string_find_index_substring_string(msg_hash_to_str(info_list[i].label_idx), idx_placeholder);
-         if ( idxpos > 0 && 
-              string_starts_with_size(label, msg_hash_to_str(info_list[i].label_idx), idxpos) && 
-              (( (size_t) idxpos == strlen(msg_hash_to_str(info_list[i].label_idx)) - 2) || 
-               ( (size_t) idxpos <  strlen(msg_hash_to_str(info_list[i].label_idx)) - 2  && 
-                          string_ends_with_size(label, 
-                                          msg_hash_to_str(info_list[i].label_idx)+idxpos+2,
-                                          lbl_len, 
-                                          strlen(msg_hash_to_str(info_list[i].label_idx))-idxpos-2))))
+         int idxpos = string_find_index_substring_string(msg_hash_to_str((enum msg_hash_enums)info_list[i].label_idx), idx_placeholder);
+         if (   (idxpos > 0)
+              && string_starts_with_size(label, msg_hash_to_str((enum msg_hash_enums)info_list[i].label_idx), idxpos)
+              && (((size_t)idxpos == strlen(msg_hash_to_str((enum msg_hash_enums)info_list[i].label_idx)) - 2)
+              || ((size_t)idxpos   <  strlen(msg_hash_to_str((enum msg_hash_enums)info_list[i].label_idx)) - 2          && string_ends_with_size(label,
+                  msg_hash_to_str((enum msg_hash_enums)info_list[i].label_idx) + idxpos + 2,
+                  lbl_len,
+                  strlen(msg_hash_to_str((enum msg_hash_enums)info_list[i].label_idx))-idxpos-2))))
          {
             BIND_ACTION_SUBLABEL(cbs, info_list[i].cb);
             return 0;

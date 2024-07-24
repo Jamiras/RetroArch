@@ -73,7 +73,7 @@ MSG_HASH(
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_LOAD_CONTENT_LIST,
-   "Last inn innhold"
+   "Åpne innhold"
    )
 MSG_HASH(
    MENU_ENUM_SUBLABEL_LOAD_CONTENT_LIST,
@@ -1161,9 +1161,13 @@ MSG_HASH(
    "Aktiver Sky-Synkronisering"
    )
 MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_CLOUD_SYNC_SYNC_CONFIGS,
+   "Sync: Configuration Files"
+   )      
+MSG_HASH(
    MENU_ENUM_SUBLABEL_CLOUD_SYNC_DESTRUCTIVE,
    "Når deaktivert, flyttes filer til en sikkerhetskopimappe før de overskrives eller slettes."
-   )
+   )      
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_CLOUD_SYNC_URL,
    "URL for sky-lagring"
@@ -1294,7 +1298,7 @@ MSG_HASH(
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_DIRECTORY_SETTINGS,
-   "Katalog"
+   "Mapper"
    )
 MSG_HASH(
    MENU_ENUM_SUBLABEL_DIRECTORY_SETTINGS,
@@ -1406,6 +1410,18 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_MENU_DRIVER,
    "Meny"
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_HELP_MENU_DRIVER_XMB,
+   "XMB er et RetroArch grafisk grensesnitt som ligner en 7. generasjons konsoll-meny. Den kan støtte de samme funksjonene som Ozone."
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_HELP_MENU_DRIVER_OZONE,
+   "Ozone er det standard grafiske grensesnittet for RetroArch på de fleste plattformer. Den er optimalisert for navigasjon med en spillkontroller."
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_HELP_MENU_DRIVER_RGUI,
+   "RGUI er et enkelt innebygd grafisk grensesnitt for RetroArch. Den har det laveste ytelseskravet av menydrivere, og kan brukes på skjermer med lav oppløsning."
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_RECORD_DRIVER,
@@ -1596,6 +1612,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_SUBLABEL_CRT_SWITCH_PORCH_ADJUST,
    "Bla gjennom disse valgene for å justere \"porch\" innstillingene for å endre bildestørrelsen."
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_CRT_SWITCH_HIRES_MENU,
+   "Bruk meny med høy oppløsning"
    )
 MSG_HASH(
    MENU_ENUM_SUBLABEL_CRT_SWITCH_HIRES_MENU,
@@ -1900,17 +1920,11 @@ MSG_HASH(
    "Egendefinert størrelsesforhold (X posisjon)"
    )
 MSG_HASH(
-   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_CUSTOM_X,
-   "Tilpasset visningsregion forskyvning bruk for å definere X-aksen av visningsregionen.\nDisse er ignorert hvis \"heltall skalering\" er aktivert."
-   )
-MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_VIEWPORT_CUSTOM_Y,
    "Egendefinert størrelsesforhold (Y posisjon)"
    )
-MSG_HASH(
-   MENU_ENUM_SUBLABEL_VIDEO_VIEWPORT_CUSTOM_Y,
-   "Tilpasset visningsregion forskyvning bruk for å definere Y-aksen av visningsregionen.\nDisse er ignorert hvis \"heltall skalering\" er aktivert."
-   )
+#if defined(RARCH_MOBILE)
+#endif
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_VIDEO_VIEWPORT_CUSTOM_WIDTH,
    "Egendefinert størrelsesforhold (bredde)"
@@ -2629,6 +2643,14 @@ MSG_HASH(
 /* Settings > User Interface */
 
 MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_MENU_VIEWS_SETTINGS,
+   "Menypunkt synlighet"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_MENU_VIEWS_SETTINGS,
+   "Slå av/på visning av menyelementer i RetroArch."
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_VALUE_MENU_SETTINGS,
    "Utseende"
    )
@@ -2680,7 +2702,11 @@ MSG_HASH(
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_THREADED_DATA_RUNLOOP_ENABLE,
-   "Trå-kjørte oppgaver"
+   "Tråd-kjørte oppgaver"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_THREADED_DATA_RUNLOOP_ENABLE,
+   "Utfør oppgaver på en separate tråder."
    )
 
 /* Settings > User Interface > Menu Item Visibility */
@@ -2690,8 +2716,16 @@ MSG_HASH(
    "Hurtigmeny"
    )
 MSG_HASH(
+   MENU_ENUM_SUBLABEL_QUICK_MENU_VIEWS_SETTINGS,
+   "Slå av/på visning av menyelementer i hurtigmenyen."
+   )
+MSG_HASH(
    MENU_ENUM_LABEL_VALUE_SETTINGS_VIEWS_SETTINGS,
    "Innstillinger"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_SETTINGS_VIEWS_SETTINGS,
+   "Slå av/på visning av menyelementer i Innstillinger-menyen."
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_MENU_SHOW_LOAD_CORE,
@@ -2700,6 +2734,14 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_SUBLABEL_MENU_SHOW_LOAD_CORE,
    "Vis alternativet 'åpne kjernen' i hovedmenyen."
+   )
+MSG_HASH(
+   MENU_ENUM_LABEL_VALUE_MENU_SHOW_LOAD_CONTENT,
+   "Vis \"Åpne innhold\""
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_MENU_SHOW_LOAD_CONTENT,
+   "Vis alternativet 'Åpne innhold' i hovedmenyen."
    )
 #ifdef HAVE_LAKKA
 #endif
@@ -3282,6 +3324,10 @@ MSG_HASH(
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_PLAYLIST_MANAGER_LIST,
    "Behandle spillelister"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_PLAYLIST_MANAGER_LIST,
+   "Utfør vedlikeholdsoppgaver på spillelister."
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_PLAYLIST_PORTABLE_PATHS,
@@ -5194,12 +5240,24 @@ MSG_HASH(
    "Skjermoppløsning: Standard"
    )
 MSG_HASH(
+   MSG_SCREEN_RESOLUTION_NO_DESC,
+   "Skjermoppløsning: %dx%d"
+   )
+MSG_HASH(
+   MSG_SCREEN_RESOLUTION_DESC,
+   "Skjermoppløsning: %dx%d - %s"
+   )
+MSG_HASH(
    MSG_SCREEN_RESOLUTION_APPLYING_DEFAULT,
    "Aktiverer: Standard"
    )
 MSG_HASH(
    MSG_SCREEN_RESOLUTION_RESETTING_DEFAULT,
    "Tilbakestiller til: Standard"
+   )
+MSG_HASH(
+   MENU_ENUM_SUBLABEL_SCREEN_RESOLUTION,
+   "Velg visningsmodus (Omstart kreves)"
    )
 MSG_HASH(
    MENU_ENUM_LABEL_VALUE_SHUTDOWN,

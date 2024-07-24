@@ -27,10 +27,6 @@
 #define HAVE_COMPRESSION 1
 #endif
 
-#if defined(__APPLE__) && defined(__MACH__)
-#include "../frontend/drivers/platform_darwin.m"
-#endif
-
 #if defined(HAVE_COCOATOUCH) || defined(HAVE_COCOA) || defined(HAVE_COCOA_METAL)
 
 #include "../ui/drivers/cocoa/cocoa_common.m"
@@ -55,6 +51,10 @@
 #include "../input/drivers_joypad/mfi_joypad.m"
 #endif
 
+#if defined(__APPLE__) && defined(__MACH__)
+#include "../frontend/drivers/platform_darwin.m"
+#endif
+
 #ifdef HAVE_COREAUDIO3
 #include "../audio/drivers/coreaudio3.m"
 #endif
@@ -70,4 +70,8 @@
 
 #if defined(HAVE_NETWORKING) && defined(HAVE_NETPLAYDISCOVERY) && defined(HAVE_NETPLAYDISCOVERY_NSNET)
 #import "../network/netplay/netplay_nsnetservice.m"
+#endif
+
+#if defined(HAVE_CLOUDSYNC) && defined(HAVE_ICLOUD)
+#include "../network/cloud_sync/icloud.m"
 #endif

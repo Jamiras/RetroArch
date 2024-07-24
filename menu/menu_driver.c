@@ -640,7 +640,7 @@ bool menu_entries_list_search(const char *needle, size_t *idx)
 /* Display the date and time - time_mode will influence how
  * the time representation will look like.
  * */
-void menu_display_timedate(gfx_display_ctx_datetime_t *datetime)
+size_t menu_display_timedate(gfx_display_ctx_datetime_t *datetime)
 {
    struct menu_state *menu_st  = &menu_driver_state;
 
@@ -1008,7 +1008,7 @@ void menu_display_timedate(gfx_display_ctx_datetime_t *datetime)
 
    /* Copy cached datetime string to input
     * menu_display_ctx_datetime_t struct */
-   strlcpy(datetime->s, menu_st->datetime_cache, datetime->len);
+   return strlcpy(datetime->s, menu_st->datetime_cache, datetime->len);
 }
 
 /* Display current (battery) power state */
@@ -1534,7 +1534,7 @@ static bool menu_input_key_bind_poll_find_hold_pad(
       if (!found)
          continue;
 
-      output->key = b;
+      output->key = (enum retro_key)b;
       return true;
    }
 
@@ -1650,7 +1650,7 @@ static bool menu_input_key_bind_poll_find_trigger_pad(
       if (!found)
          continue;
 
-      output->key = b;
+      output->key = (enum retro_key)b;
       return true;
    }
 
@@ -4605,11 +4605,10 @@ void menu_entries_get_core_title(char *s, size_t len)
 #if defined(_MSC_VER)
    _len += strlcpy(s + _len, msvc_vercode_to_str(_MSC_VER), len - _len);
 #endif
-
+   _len += strlcpy(s + _len, " - ",     len - _len);
+   _len += strlcpy(s + _len, core_name, len - _len);
    if (!string_is_empty(core_version))
-      snprintf(s + _len, len - _len, " - %s (%s)", core_name, core_version);
-   else
-      snprintf(s + _len, len - _len, " - %s", core_name);
+      snprintf(s + _len, len - _len, " (%s)", core_version);
 }
 
 static bool menu_driver_init_internal(
@@ -5196,6 +5195,7 @@ unsigned menu_event(
       input_bits_t *p_trigger_input,
       bool display_kb)
 {
+   int i;
    /* Used for key repeat */
    static retro_time_t last_time_us                = 0;
    static float delay_timer                        = 0.0f;
@@ -5243,7 +5243,6 @@ unsigned menu_event(
          RETRO_DEVICE_ID_JOYPAD_A : RETRO_DEVICE_ID_JOYPAD_B;
    unsigned ok_current                             = BIT256_GET_PTR(p_input, menu_ok_btn);
    unsigned ok_trigger                             = ok_current & ~ok_old;
-   unsigned i                                      = 0;
    static unsigned navigation_initial              = 0;
    unsigned navigation_current                     = 0;
    unsigned navigation_buttons[8]                  =

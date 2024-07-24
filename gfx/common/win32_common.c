@@ -1002,6 +1002,8 @@ static LRESULT CALLBACK wnd_proc_common(
                mod |= RETROKMOD_CAPSLOCK;
             if (GetKeyState(VK_SCROLL)  & 0x81)
                mod |= RETROKMOD_SCROLLOCK;
+            if (GetKeyState(VK_NUMLOCK) & 0x81)
+               mod |= RETROKMOD_NUMLOCK;
             if ((GetKeyState(VK_LWIN) | GetKeyState(VK_RWIN)) & 0x80)
                mod |= RETROKMOD_META;
 
@@ -1106,14 +1108,12 @@ static LRESULT CALLBACK wnd_proc_common_internal(HWND hwnd,
             unsigned keysym       = (lparam >> 16) & 0xff;
             bool extended         = (lparam >> 24) & 0x1;
 
+            /* NumLock vs Pause correction */
+            if (keysym == 0x45 && (wparam == VK_NUMLOCK || wparam == VK_PAUSE))
+               extended = !extended;
+
             /* extended keys will map to dinput if the high bit is set */
             if (extended)
-               keysym |= 0x80;
-
-            /* NumLock vs Pause correction */
-            if (GetKeyState(VK_NUMLOCK) & 0x80 && extended)
-               keysym &= ~0x80;
-            else if (GetKeyState(VK_PAUSE) & 0x80 && !extended)
                keysym |= 0x80;
 
             keycode = input_keymaps_translate_keysym_to_rk(keysym);
@@ -1128,6 +1128,8 @@ static LRESULT CALLBACK wnd_proc_common_internal(HWND hwnd,
                mod |= RETROKMOD_CAPSLOCK;
             if (GetKeyState(VK_SCROLL)  & 0x81)
                mod |= RETROKMOD_SCROLLOCK;
+            if (GetKeyState(VK_NUMLOCK) & 0x81)
+               mod |= RETROKMOD_NUMLOCK;
             if ((GetKeyState(VK_LWIN) | GetKeyState(VK_RWIN)) & 0x80)
                mod |= RETROKMOD_META;
 
@@ -1359,14 +1361,12 @@ static LRESULT CALLBACK wnd_proc_common_dinput_internal(HWND hwnd,
             unsigned keysym       = (lparam >> 16) & 0xff;
             bool extended         = (lparam >> 24) & 0x1;
 
+            /* NumLock vs Pause correction */
+            if (keysym == 0x45 && (wparam == VK_NUMLOCK || wparam == VK_PAUSE))
+               extended = !extended;
+
             /* extended keys will map to dinput if the high bit is set */
             if (extended)
-               keysym |= 0x80;
-
-            /* NumLock vs Pause correction */
-            if (GetKeyState(VK_NUMLOCK) & 0x80 && extended)
-               keysym &= ~0x80;
-            else if (GetKeyState(VK_PAUSE) & 0x80 && !extended)
                keysym |= 0x80;
 
             keycode = input_keymaps_translate_keysym_to_rk(keysym);
@@ -1388,6 +1388,8 @@ static LRESULT CALLBACK wnd_proc_common_dinput_internal(HWND hwnd,
                mod |= RETROKMOD_CAPSLOCK;
             if (GetKeyState(VK_SCROLL)  & 0x81)
                mod |= RETROKMOD_SCROLLOCK;
+            if (GetKeyState(VK_NUMLOCK) & 0x81)
+               mod |= RETROKMOD_NUMLOCK;
             if ((GetKeyState(VK_LWIN) | GetKeyState(VK_RWIN)) & 0x80)
                mod |= RETROKMOD_META;
 

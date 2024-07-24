@@ -105,6 +105,40 @@ static void ui_companion_cocoatouch_set_app_icon(const char *iconName)
    [[UIApplication sharedApplication] setAlternateIconName:str completionHandler:nil];
 }
 
+static uintptr_t ui_companion_cocoatouch_get_app_icon_texture(const char *icon)
+{
+   static NSMutableDictionary<NSString *, NSNumber *> *textures = nil;
+   static dispatch_once_t once;
+   dispatch_once(&once, ^{
+      textures = [NSMutableDictionary dictionaryWithCapacity:6];
+   });
+
+   NSString *iconName = [NSString stringWithUTF8String:icon];
+   if (!textures[iconName])
+   {
+      UIImage *img = [UIImage imageNamed:iconName];
+      if (!img)
+      {
+         RARCH_LOG("could not load %s\n", icon);
+         return 0;
+      }
+      NSData *png = UIImagePNGRepresentation(img);
+      if (!png)
+      {
+         RARCH_LOG("could not get png for %s\n", icon);
+         return 0;
+      }
+
+      uintptr_t item;
+      gfx_display_reset_textures_list_buffer(&item, TEXTURE_FILTER_MIPMAP_LINEAR,
+                                             (void*)[png bytes], (unsigned int)[png length], IMAGE_TYPE_PNG,
+                                             NULL, NULL);
+      textures[iconName] = [NSNumber numberWithUnsignedLong:item];
+   }
+
+   return [textures[iconName] unsignedLongValue];
+}
+
 static void rarch_draw_observer(CFRunLoopObserverRef observer,
     CFRunLoopActivity activity, void *info)
 {
@@ -340,6 +374,60 @@ enum
 
    return [super _keyCommandForEvent:event];
 }
+#else
+- (void)handleUIPress:(UIPress *)press withEvent:(UIPressesEvent *)event down:(BOOL)down
+{
+   NSString       *ch = (NSString*)press.key.characters;
+   uint32_t character = 0;
+   uint32_t mod       = 0;
+   NSUInteger mods    = event.modifierFlags;
+
+   if (mods & UIKeyModifierAlphaShift)
+      mod |= RETROKMOD_CAPSLOCK;
+   if (mods & UIKeyModifierShift)
+      mod |= RETROKMOD_SHIFT;
+   if (mods & UIKeyModifierControl)
+      mod |= RETROKMOD_CTRL;
+   if (mods & UIKeyModifierAlternate)
+      mod |= RETROKMOD_ALT;
+   if (mods & UIKeyModifierCommand)
+      mod |= RETROKMOD_META;
+   if (mods & UIKeyModifierNumericPad)
+      mod |= RETROKMOD_NUMLOCK;
+
+   if (ch && ch.length != 0)
+   {
+      unsigned i;
+      character = [ch characterAtIndex:0];
+
+      apple_input_keyboard_event(down,
+                                 (uint32_t)press.key.keyCode, 0, mod,
+                                 RETRO_DEVICE_KEYBOARD);
+
+      for (i = 1; i < ch.length; i++)
+         apple_input_keyboard_event(down,
+                                    0, [ch characterAtIndex:i], mod,
+                                    RETRO_DEVICE_KEYBOARD);
+   }
+
+   apple_input_keyboard_event(down,
+                              (uint32_t)press.key.keyCode, character, mod,
+                              RETRO_DEVICE_KEYBOARD);
+}
+
+- (void)pressesBegan:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
+{
+   for (UIPress *press in presses)
+      [self handleUIPress:press withEvent:event down:YES];
+   [super pressesBegan:presses withEvent:event];
+}
+
+- (void)pressesEnded:(NSSet<UIPress *> *)presses withEvent:(UIPressesEvent *)event
+{
+   for (UIPress *press in presses)
+      [self handleUIPress:press withEvent:event down:NO];
+   [super pressesEnded:presses withEvent:event];
+}
 #endif
 
 #define GSEVENT_TYPE_KEYDOWN 10
@@ -506,22 +594,6 @@ enum
    }
 }
 
-- (NSData *)pngForIcon:(NSString *)iconName
-{
-    UIImage *img;
-    NSData *png;
-    img = [UIImage imageNamed:iconName];
-    if (!img)
-        NSLog(@"could not load %@\n", iconName);
-    else
-    {
-        png = UIImagePNGRepresentation(img);
-        if (!png)
-            NSLog(@"could not get png for %@\n", iconName);
-    }
-    return png;
-}
-
 - (void)applicationDidFinishLaunching:(UIApplication *)application
 {
    char arguments[]   = "retroarch";
@@ -547,18 +619,26 @@ enum
    uico_driver_state_t *uico_st     = uico_state_get_ptr();
    rarch_setting_t *appicon_setting = menu_setting_find_enum(MENU_ENUM_LABEL_APPICON_SETTINGS);
    struct string_list *icons;
-   if (appicon_setting && uico_st->drv && uico_st->drv->get_app_icons && (icons = uico_st->drv->get_app_icons()) && icons->size > 1)
+   if (               appicon_setting
+		   && uico_st->drv
+		   && uico_st->drv->get_app_icons
+		   && (icons = uico_st->drv->get_app_icons())
+		   && icons->size > 1)
    {
+      int i;
+      size_t len    = 0;
+      char *options = NULL;
+      const char *icon_name;
+
       appicon_setting->default_value.string = icons->elems[0].data;
-      int len = 0, i = 0;
-      const char *iconName = [[application alternateIconName] cStringUsingEncoding:kCFStringEncodingUTF8]; // need to ask uico_st for this
-      for (; i < (int)icons->size; i++)
+      icon_name = [[application alternateIconName] cStringUsingEncoding:kCFStringEncodingUTF8]; /* need to ask uico_st for this */
+      for (i = 0; i < (int)icons->size; i++)
       {
          len += strlen(icons->elems[i].data) + 1;
-         if (string_is_equal(iconName, icons->elems[i].data))
+         if (string_is_equal(icon_name, icons->elems[i].data))
             appicon_setting->value.target.string = icons->elems[i].data;
       }
-      char *options = (char*)calloc(len, sizeof(char));
+      options = (char*)calloc(len, sizeof(char));
       string_list_join_concat(options, len, icons, "|");
       if (appicon_setting->values)
          free((void*)appicon_setting->values);
@@ -717,10 +797,10 @@ enum
    apple_frontend_settings.orientation_flags = UIInterfaceOrientationMaskAll;
 
    if (string_is_equal(apple_frontend_settings.orientations, "landscape"))
-      apple_frontend_settings.orientation_flags = 
+      apple_frontend_settings.orientation_flags =
            UIInterfaceOrientationMaskLandscape;
    else if (string_is_equal(apple_frontend_settings.orientations, "portrait"))
-      apple_frontend_settings.orientation_flags = 
+      apple_frontend_settings.orientation_flags =
            UIInterfaceOrientationMaskPortrait
          | UIInterfaceOrientationMaskPortraitUpsideDown;
 #endif
@@ -763,6 +843,7 @@ ui_companion_driver_t ui_companion_cocoatouch = {
    NULL, /* is_active */
    ui_companion_cocoatouch_get_app_icons,
    ui_companion_cocoatouch_set_app_icon,
+   ui_companion_cocoatouch_get_app_icon_texture,
    NULL, /* browser_window */
    NULL, /* msg_window */
    NULL, /* window */
