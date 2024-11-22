@@ -3647,7 +3647,11 @@ void rc_hash_initialize_iterator(struct rc_hash_iterator* iterator, const char* 
         break;
 
       case 'a':
-        if (rc_path_compare_extension(ext, "a78"))
+        if (rc_path_compare_extension(ext, "a26"))
+        {
+          iterator->consoles[0] = RC_CONSOLE_ATARI_2600;
+        }
+        else if (rc_path_compare_extension(ext, "a78"))
         {
           iterator->consoles[0] = RC_CONSOLE_ATARI_7800;
         }

@@ -98,6 +98,10 @@ typedef struct rcheevos_locals_t
    unsigned menuitem_count;           /* current number of items in the menuitems array */
 #endif
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+   unsigned console_id;               /* the console_id of the game being loaded */
+#endif
+
    bool hardcore_allowed;             /* prevents enabling hardcore if illegal settings detected */
    bool hardcore_being_enabled;       /* allows callers to detect hardcore mode while it's being enabled */
 

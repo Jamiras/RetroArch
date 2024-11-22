@@ -70,8 +70,14 @@
 #include "../runtime_file.h"
 #include "../core.h"
 #include "../core_option_manager.h"
+#include "../version.h"
 
 #include "../tasks/tasks_internal.h"
+
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+#include "../deps/rcheevos/include/rc_client_raintegration.h"
+#include <gfx/common/win32_common.h>
+#endif
 
 #include "../deps/rcheevos/include/rc_runtime.h"
 #include "../deps/rcheevos/include/rc_runtime_types.h"
@@ -95,6 +101,9 @@ static rcheevos_locals_t rcheevos_locals =
    NULL, /* menuitems */
    0,    /* menuitem_capacity */
    0,    /* menuitem_count */
+#endif
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+   0,    /* console_id */
 #endif
    true, /* hardcore_allowed */
    false,/* hardcore_being_enabled */
@@ -1401,6 +1410,29 @@ static void rcheevos_client_load_game_callback(int result,
    gfx_widget_set_cheevos_set_loading(false);
 #endif
 
+   if (rcheevos_locals.memory.total_size == 0)
+   {
+      /* make one last attempt to initialize memory */
+      if (!rcheevos_init_memory(&rcheevos_locals))
+      {
+         rcheevos_locals.core_supports = false;
+
+         CHEEVOS_ERR(RCHEEVOS_TAG "No memory exposed by core\n");
+
+         if (settings && settings->bools.cheevos_verbose_enable)
+            runloop_msg_queue_push(msg_hash_to_str(MENU_ENUM_LABEL_VALUE_CANNOT_ACTIVATE_ACHIEVEMENTS_WITH_THIS_CORE),
+               0, 4 * 60, false, NULL,
+               MESSAGE_QUEUE_ICON_DEFAULT, MESSAGE_QUEUE_CATEGORY_WARNING);
+
+         rcheevos_unload();
+         rcheevos_pause_hardcore();
+         return;
+      }
+
+      /* have valid memory now. use the real read function */
+      rc_client_set_read_memory_function(client, rcheevos_client_read_memory);
+   }
+
    if (result != RC_OK || !game)
    {
       if (result == RC_NO_GAME_LOADED)
@@ -1425,29 +1457,6 @@ static void rcheevos_client_load_game_callback(int result,
       runloop_msg_queue_push(msg, 0, 2 * 60, false, NULL,
          MESSAGE_QUEUE_ICON_DEFAULT, MESSAGE_QUEUE_CATEGORY_INFO);
       return;
-   }
-
-   if (rcheevos_locals.memory.total_size == 0)
-   {
-      /* make one last attempt to initialize memory */
-      if (!rcheevos_init_memory(&rcheevos_locals))
-      {
-         rcheevos_locals.core_supports = false;
-
-         CHEEVOS_ERR(RCHEEVOS_TAG "No memory exposed by core\n");
-
-         if (settings && settings->bools.cheevos_verbose_enable)
-            runloop_msg_queue_push(msg_hash_to_str(MENU_ENUM_LABEL_VALUE_CANNOT_ACTIVATE_ACHIEVEMENTS_WITH_THIS_CORE),
-               0, 4 * 60, false, NULL,
-               MESSAGE_QUEUE_ICON_DEFAULT, MESSAGE_QUEUE_CATEGORY_WARNING);
-
-         rcheevos_unload();
-         rcheevos_pause_hardcore();
-         return;
-      }
-
-      /* have valid memory now. use the real read function */
-      rc_client_set_read_memory_function(client, rcheevos_client_read_memory);
    }
 
 #ifdef HAVE_THREADS
@@ -1498,7 +1507,181 @@ static rc_clock_t rcheevos_client_get_time_millisecs(const rc_client_t* client)
    return cpu_features_get_time_usec() / 1000;
 }
 
+static void rcheevos_client_process_custom_host()
+{
+   const settings_t* settings = config_get_ptr();
+   const char* host = settings->arrays.cheevos_custom_host;
+   if (!host[0])
+   {
+#ifdef HAVE_SSL
+      host = "https://retroachievements.org";
+#else
+      host = "http://retroachievements.org";
+#endif
+   }
 
+   rc_client_set_host(rcheevos_locals.client, host);
+}
+
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+
+static void rc_client_raintegration_hardcore_changed(rc_client_t* client)
+{
+   const bool hardcore_enabled = rc_client_get_hardcore_enabled(client);
+   if (hardcore_enabled)
+   {
+      if (rcheevos_locals.hardcore_allowed)
+      {
+         rcheevos_validate_config_settings();
+         if (rcheevos_locals.hardcore_allowed)
+         {
+            cheat_manager_apply_cheats();
+            if (rcheevos_locals.hardcore_allowed)
+               rcheevos_enforce_hardcore_settings();
+         }
+      }
+
+      if (!rcheevos_locals.hardcore_allowed)
+      {
+         /* local setting prevented hardcore enablement - message should
+          * have been displayed */
+         rc_client_set_hardcore_enabled(client, false);
+         return;
+      }
+   }
+
+   {
+      settings_t* settings = config_get_ptr();
+      settings->bools.cheevos_hardcore_mode_enable = hardcore_enabled;
+
+      bool rewind_enable = settings->bools.rewind_enable;
+      if (rewind_enable)
+      {
+         const enum event_command cmd = hardcore_enabled ?
+            CMD_EVENT_REWIND_DEINIT : CMD_EVENT_REWIND_INIT;
+
+#ifdef HAVE_THREADS
+         if (!task_is_on_main_thread())
+         {
+            /* have to "schedule" this.
+             * CMD_EVENT_REWIND_DEINIT should
+             * only be called on the main thread */
+            rcheevos_locals.queued_command = cmd;
+         }
+         else
+#endif
+            command_event(cmd, NULL);
+      }
+   }
+}
+
+static void rcheevos_raintegration_event_handler(const rc_client_raintegration_event_t* event, rc_client_t* client)
+{
+   switch (event->type)
+   {
+   case RC_CLIENT_RAINTEGRATION_EVENT_MENUITEM_CHECKED_CHANGED:
+      rc_client_raintegration_update_menu_item(client, event->menu_item);
+      break;
+   case RC_CLIENT_RAINTEGRATION_EVENT_PAUSE:
+      command_event(CMD_EVENT_PAUSE, NULL); /* pause the game */
+      break;
+   case RC_CLIENT_RAINTEGRATION_EVENT_HARDCORE_CHANGED:
+      rc_client_raintegration_hardcore_changed(client);
+      break;
+#ifdef _WIN32
+   case RC_CLIENT_RAINTEGRATION_EVENT_MENU_CHANGED:
+      /* use a pseudo-command to ensure this happens on the UI thread */
+      PostMessage(win32_get_window(), WM_COMMAND, RC_COMMAND_REBUILD_MENU, 0);
+      break;
+#endif
+   default:
+#ifndef NDEBUG
+      CHEEVOS_LOG(RCHEEVOS_TAG "Unsupported raintegration event %u\n", event->type);
+#endif
+      break;
+   }
+}
+
+static uint32_t rcheevos_raintegration_write_memory(uint32_t address,
+   uint8_t* buffer, uint32_t num_bytes, rc_client_t* client)
+{
+   uint32_t avail;
+   uint8_t* ptr = rc_libretro_memory_find_avail(&rcheevos_locals.memory, address, &avail);
+   if (avail >= num_bytes)
+   {
+      memcpy(ptr, buffer, num_bytes);
+      return num_bytes;
+   }
+
+   if (avail == 0)
+      return 0;
+
+   memcpy(ptr, buffer, avail);
+   return avail + rcheevos_raintegration_write_memory(address + avail, buffer + avail, num_bytes - avail, client);
+}
+
+static void rc_client_raintegration_get_game_name(char* buffer, uint32_t buffer_size, rc_client_t* client)
+{
+   const char* content_path = path_get(RARCH_PATH_CONTENT);
+   snprintf(buffer, buffer_size, path_basename(content_path));
+   path_remove_extension(buffer);
+}
+
+static void rcheevos_load_raintegration_callback(int result,
+   const char* error_message, rc_client_t* client, void* userdata)
+{
+   struct retro_game_info* info = (struct retro_game_info*)userdata;
+
+   if (result == RC_OK)
+   {
+#ifndef HAVE_SSL
+      /* raintegration will provide its own host information. if it provides an SSL host
+       * and we can't make SSL calls, change it to a non-SSL request and cross our fingers */
+      char url[256] = "";
+      if (rc_client_achievement_get_image_url(NULL, RC_CLIENT_ACHIEVEMENT_STATE_UNLOCKED, url, sizeof(url)) == RC_OK &&
+         strncmp(url, "https://", 8) == 0)
+      {
+         char* ptr = &url[7], ch;
+         url[4] = ':';
+         url[5] = '/';
+         url[6] = '/';
+         while ((ch = ptr[1]) != '/')
+            *ptr++ = ch;
+         *ptr = '\0';
+         rc_api_set_image_host(url);
+      }
+#endif
+
+      rc_client_raintegration_set_event_handler(client, rcheevos_raintegration_event_handler);
+      rc_client_raintegration_set_write_memory_function(client, rcheevos_raintegration_write_memory);
+      rc_client_raintegration_set_get_game_name_function(client, rc_client_raintegration_get_game_name);
+   }
+
+   rcheevos_client_process_custom_host();
+
+   rcheevos_client_download_placeholder_badge();
+
+   rcheevos_load(info);
+
+   if (info->path)
+      free((void*)info->path);
+   if (info->data)
+      free((void*)info->data);
+   free(info);
+
+   if (result == RC_OK)
+   {
+      /* the raintegration initialization process may start before the window is created.
+       * ensure the handle is correct */
+      rc_client_raintegration_update_main_window_handle(rcheevos_locals.client, win32_get_window());
+
+      /* initialization has finished, the menu can be populated now -
+       * use a pseudo-command to ensure this happens on the UI thread */
+      PostMessage(win32_get_window(), WM_COMMAND, RC_COMMAND_REBUILD_MENU, 0);
+   }
+}
+
+#endif
 
 bool rcheevos_load(const void *data)
 {
@@ -1544,19 +1727,47 @@ bool rcheevos_load(const void *data)
       rc_client_set_event_handler(rcheevos_locals.client, rcheevos_client_event_handler);
       rc_client_set_get_time_millisecs_function(rcheevos_locals.client, rcheevos_client_get_time_millisecs);
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
       {
-         const char* host = settings->arrays.cheevos_custom_host;
-         if (!host[0])
+         char app_path[MAX_PATH];
+         wchar_t app_path_w[MAX_PATH];
+
+         struct retro_game_info* info_copy = (struct retro_game_info*)
+            calloc(1, sizeof(*info));
+         info_copy->path = (info->path) ? strdup(info->path) : NULL;
+         if (info->data)
          {
-#ifdef HAVE_SSL
-            host = "https://retroachievements.org";
-#else
-            host = "http://retroachievements.org";
-#endif
+            info_copy->data = malloc(info->size);
+            memcpy((void*)info_copy->data, info->data, info->size);
+            info_copy->size = info->size;
          }
 
-         rc_client_set_host(rcheevos_locals.client, host);
+#ifndef HAVE_SSL
+         /* if the dll doesn't specify a custom host and we don't support SSL, we need to use
+          * the non-SSL host. if the dll does specify a custom host, it will overwrite this */
+         rc_client_set_host(rcheevos_locals.client, "http://retroachievements.org");
+#endif
+
+         /* get the application directory - look for the DLL there */
+         fill_pathname_application_dir(app_path, sizeof(app_path));
+         if (MultiByteToWideChar(CP_UTF8, 0, app_path, strlen(app_path) + 1, app_path_w, ARRAY_SIZE(app_path_w)) == 0)
+         {
+            /* conversion failed, just use the current directory. */
+            app_path_w[0] = '.';
+            app_path_w[1] = '\0';
+         }
+
+         rc_client_begin_load_raintegration(rcheevos_locals.client,
+            app_path_w,
+            (HWND)video_driver_window_get(), "RetroArch", PACKAGE_VERSION,
+            rcheevos_load_raintegration_callback, info_copy);
+         return true;
       }
+#endif
+
+      /* set the custom host and download the placeholder dll - this is delayed when using
+       * the integration as it may provide its own custom host */
+      rcheevos_client_process_custom_host();
 
       rcheevos_client_download_placeholder_badge();
    }
@@ -1601,9 +1812,25 @@ bool rcheevos_load(const void *data)
       gfx_widget_set_cheevos_set_loading(true);
 #endif
 
-   rc_client_begin_identify_and_load_game(rcheevos_locals.client, RC_CONSOLE_UNKNOWN,
-      info->path, (const uint8_t*)info->data, info->size, rcheevos_client_load_game_callback, NULL);
+   {
+      uint32_t console_id = RC_CONSOLE_UNKNOWN;
 
+#ifdef RC_CLIENT_SUPPORTS_RAINTEGRATION
+      rc_hash_iterator_t iterator;
+
+      /* if iterator only returns one console_id, use that as a fallback for initialization of an unknown game */
+      rc_hash_initialize_iterator(&iterator, info->path, (const uint8_t*)info->data, info->size);
+      if (iterator.consoles[1] == 0) {
+         console_id = iterator.consoles[0];
+         rc_client_raintegration_set_console_id(rcheevos_locals.client, console_id);
+      }
+
+      rcheevos_locals.console_id = console_id;
+#endif
+
+      rc_client_begin_identify_and_load_game(rcheevos_locals.client, console_id,
+         info->path, (const uint8_t*)info->data, info->size, rcheevos_client_load_game_callback, NULL);
+   }
 
 
    return true;

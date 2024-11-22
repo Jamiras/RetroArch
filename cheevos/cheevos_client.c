@@ -89,6 +89,7 @@ static int append_no_spaces(char* buffer, char* stop, const char* text)
 void rcheevos_get_user_agent(rcheevos_locals_t *locals,
       char *buffer, size_t len)
 {
+   char* stop = buffer + len - 1;
    char* ptr;
    struct retro_system_info *sysinfo = &runloop_state_get_ptr()->system.info;
 
@@ -136,6 +137,14 @@ void rcheevos_get_user_agent(rcheevos_locals_t *locals,
          ptr += append_no_spaces(ptr, stop, sysinfo->library_version);
       }
    }
+
+#ifdef HAVE_RC_CLIENT
+   if (stop - ptr > 16 && locals->client)
+   {
+      *ptr++ = ' ';
+      ptr += rc_client_get_user_agent_clause(locals->client, ptr, stop - ptr);
+   }
+#endif
 
    *ptr = '\0';
 }
